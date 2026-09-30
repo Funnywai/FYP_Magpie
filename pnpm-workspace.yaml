@@ -1,0 +1,14 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Allow these dependencies to run their install/build scripts.
+# esbuild is used by vitest.
+allowBuilds:
+  esbuild: true
+
+# Enforce the "engines" field in package.json. A wrong Node version (see .nvmrc)
+# makes `pnpm install` fail immediately instead of only warning — so nobody can
+# silently build on the wrong runtime.
+# NOTE: pnpm 11 no longer reads engine-strict from .npmrc; it lives here.
+engineStrict: true

@@ -1,0 +1,30 @@
+{
+  "name": "magpie",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.3.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build:shared": "pnpm --filter @magpie/shared build",
+    "typecheck": "pnpm build:shared && pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "db:start": "supabase start --workdir infra",
+    "db:reset": "supabase db reset --workdir infra",
+    "db:lint": "supabase db lint --fail-on error --workdir infra",
+    "db:test": "supabase test db --workdir infra"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "supabase": "^2.119.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0"
+  }
+}

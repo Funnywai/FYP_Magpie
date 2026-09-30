@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  ci:
+    name: Typecheck, lint, test, RLS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Must run before typecheck: apps/backend resolves @magpie/shared to
+      # packages/shared/dist, which does not exist on a fresh checkout.
+      - name: Build shared package
+        run: pnpm --filter @magpie/shared build
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Lint
+        run: pnpm -r lint
+
+      - name: Unit tests
+        run: pnpm -r test
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: latest
+
+      - name: Start local database and apply migrations
+        run: supabase db start --workdir infra
+
+      - name: Lint database schema
+        run: supabase db lint --fail-on error --workdir infra
+
+      - name: Run pgTAP RLS tests
+        run: supabase test db --workdir infra

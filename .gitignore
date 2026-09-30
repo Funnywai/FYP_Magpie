@@ -1,0 +1,30 @@
+# Local-only workspace (not committed)
+local/*
+AGENTS.md
+docs/superpowers/
+
+# Tooling artefacts
+.codegraph/
+.omo/
+
+# macOS
+.DS_Store
+
+# Editor / OS
+*.swp
+*~
+~$*.docx
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+.expo/
+*.tsbuildinfo
+
+# Environment (never commit secrets)
+.env
+.env.*
+!.env.example

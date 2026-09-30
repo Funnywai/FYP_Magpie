@@ -1,0 +1,345 @@
+# SPEC — Short-Form Content Retrieval App
+
+Implementation specification for the AI/content-retrieval mobile app.
+Background and academic rationale live in [`docs/Proposal.md`](./Proposal.md) — this file is the source of truth for **what to build and how it must behave**.
+
+> Read this before implementing any feature. When this file and `Proposal.md` disagree, this file wins for implementation decisions.
+
+---
+
+## 1. What We Are Building
+
+A mobile app that captures short-form social media content (Instagram Reels, YouTube Shorts, Threads, others) and makes it searchable by meaning.
+
+**Core user flow:**
+
+```
+User shares a public URL to the app
+  → system fetches caption + audio transcript + on-screen text (OCR)
+  → fuses them into one item representation
+  → generates category + semantic labels + key highlights + embedding
+  → stores item and indexes it
+  → user finds it later via natural-language search, filters, or map
+  → (optionally) turns saved places into a weather-aware itinerary
+```
+
+**Primary scope:** a single user's own saved content, captured from public URLs they explicitly share.
+
+---
+
+## 2. Tech Stack & Conventions
+
+| Layer | Choice |
+| --- | --- |
+| Mobile | React Native + Expo (dev-client required for share extension) |
+| Backend | Node.js + TypeScript, Hono (REST) |
+| Database | Supabase (PostgreSQL + pgvector) |
+| Auth | Supabase Auth |
+| AI / Multimodal | Google Gemini (caption, vision/OCR, structured output, embeddings) |
+| Speech-to-text | Deepgram (Cantonese / mixed language) |
+| External | Google Maps/Places, HKO Open Data + Open-Meteo, TMDB/AniList/trace.moe (optional) |
+
+**Repository layout:** monorepo — `apps/mobile`, `apps/backend`, `packages/shared`, `docs`, `infra`.
+
+**Conventions:**
+- TypeScript strict mode. No `any`, no `@ts-ignore`.
+- Shared request/response and domain types live in `packages/shared` — define once, import on both sides.
+- AI model calls go through a provider abstraction (`apps/backend/src/ai/providers`) so providers are swappable.
+- All external HTTP calls go through one wrapper (timeouts, retry/backoff, logging).
+- All model output is validated against a schema before use.
+
+---
+
+## 3. Data Model
+
+All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned table is protected by Supabase Row-Level Security.
+
+### 3.1 User
+| Field | Type | Notes |
+| --- | --- | --- |
+| `email` | text | from Supabase Auth |
+| `display_name` | text | |
+| `avatar_url` | text | nullable |
+| `auth_provider` | text | e.g. email, google |
+
+### 3.2 PreferenceProfile
+| Field | Type | Notes |
+| --- | --- | --- |
+| `user_id` | uuid FK → User | |
+| `preferred_categories` | text[] | |
+| `preferred_tags` | text[] | |
+| `language_preference` | text[] | e.g. yue, zh, en |
+| `ranking_weights` | jsonb | learned weights for the ranking module |
+
+### 3.3 SavedItem
+| Field | Type | Notes |
+| --- | --- | --- |
+| `user_id` | uuid FK → User | |
+| `source_url` | text | original shared URL |
+| `source_platform` | text | instagram \| youtube \| threads \| other |
+| `content_type` | text | recipe \| place \| media \| generic |
+| `title` | text | nullable |
+| `caption` | text | nullable |
+| `highlights` | jsonb | generated key points |
+| `category` | text | assigned category |
+| `status` | text | queued \| processing \| done \| needs_media \| failed |
+
+### 3.4 MediaAsset
+| Field | Type | Notes |
+| --- | --- | --- |
+| `item_id` | uuid FK → SavedItem | |
+| `asset_type` | text | thumbnail \| audio \| frame |
+| `storage_path` | text | object storage path |
+| `timestamp_seconds` | numeric | nullable; for frames |
+| `ocr_text` | text | nullable |
+
+### 3.5 TranscriptSegment
+| Field | Type | Notes |
+| --- | --- | --- |
+| `item_id` | uuid FK → SavedItem | |
+| `start_seconds` / `end_seconds` | numeric | |
+| `text` | text | |
+| `language` | text | yue \| zh \| en |
+
+### 3.6 ExtractedField
+| Field | Type | Notes |
+| --- | --- | --- |
+| `item_id` | uuid FK → SavedItem | |
+| `field_name` | text | e.g. ingredient, address, opening_hours |
+| `field_value` | text | nullable — null means "not found", never guess |
+| `confidence` | numeric | 0–1 |
+| `evidence_source` | text | asr \| ocr \| caption \| visual |
+| `evidence_ref` | text | timestamp or frame reference |
+| `verified` | boolean | passed validation |
+| `user_corrected` | boolean | user edited this field |
+
+### 3.7 EmbeddingChunk
+| Field | Type | Notes |
+| --- | --- | --- |
+| `item_id` | uuid FK → SavedItem | |
+| `chunk_type` | text | structured_card \| transcript \| ocr |
+| `chunk_text` | text | |
+| `embedding` | vector | pgvector |
+| `token_count` | int | |
+
+### 3.8 Collection
+| Field | Type | Notes |
+| --- | --- | --- |
+| `owner_id` | uuid FK → User | |
+| `name` | text | |
+| `description` | text | nullable |
+| `is_shared` | boolean | default false |
+| `parent_id` | uuid FK → Collection | nullable; enables nesting |
+
+### 3.9 CollectionItem
+| Field | Type | Notes |
+| --- | --- | --- |
+| `collection_id` | uuid FK → Collection | |
+| `item_id` | uuid FK → SavedItem | |
+| `added_by` | uuid FK → User | |
+| `order_index` | int | |
+
+### 3.10 Interaction
+| Field | Type | Notes |
+| --- | --- | --- |
+| `user_id` | uuid FK → User | |
+| `item_id` | uuid FK → SavedItem | |
+| `interaction_type` | text | like \| dislike \| view \| save |
+| `timestamp` | timestamptz | |
+
+### 3.11 ItineraryPlan
+| Field | Type | Notes |
+| --- | --- | --- |
+| `user_id` | uuid FK → User | |
+| `start_point` | text | user-defined |
+| `end_point` | text | user-defined |
+| `start_date` / `end_date` | date | |
+| `status` | text | draft \| active \| completed |
+
+### 3.12 ItineraryStop
+| Field | Type | Notes |
+| --- | --- | --- |
+| `plan_id` | uuid FK → ItineraryPlan | |
+| `day_number` | int | |
+| `item_id` | uuid FK → SavedItem | the saved place |
+| `place_id` | text | resolved place identifier |
+| `start_time` / `end_time` | time | scheduled window |
+| `indoor_outdoor` | text | indoor \| outdoor \| mixed |
+| `order_index` | int | |
+
+---
+
+## 4. Feature Behaviour
+
+Each feature below is a contract. "Done" is defined in §6.
+
+### 4.1 Capture & Extraction
+
+**Input:** a shared URL (and optionally a shared file or screen recording).
+**Output:** a `SavedItem` in status `done` with caption, transcript, frames, and extracted fields; or `needs_media` with a reason.
+
+**Behavior:**
+1. Create a `SavedItem` with status `queued`; return the id immediately (do not block the client).
+2. Resolve the platform from the URL host.
+3. Capture strategy, in order:
+   - YouTube URL → pass directly to the model provider (public video).
+   - Other platforms → fetch page metadata (title, description, thumbnail).
+   - If no usable media and the platform blocks access → set status `needs_media`, store the reason, and prompt the user to share a video file / screen recording.
+4. From usable media: extract audio and select frames (scene detection, capped count).
+5. Transcribe audio (Cantonese-aware) and OCR frames.
+6. Set status `processing → done`. Persist every intermediate artefact so retries resume from the last completed step.
+7. Delete the original media after `done`; keep only derived assets (thumbnails, transcript, frames).
+
+**Edge cases:**
+- Unreachable/private/expired URL → `failed` with a readable reason.
+- Unsupported platform → capture what metadata is available; item proceeds as `generic` if text exists.
+- Never fail silently: every non-`done` status carries a user-visible reason and next step.
+
+### 4.2 Representation & Semantic Labelling
+
+**Input:** caption + transcript + OCR text.
+**Output:** `highlights`, `category`, semantic labels, and embedding chunks.
+
+**Behavior:**
+1. Fuse the three text sources into one representation.
+2. Generate: category, semantic labels (topic, intent, location, entities), and key highlights.
+3. Produce embedding chunks: `structured_card` (title + category + key fields), `transcript` (per ~30–45s segment), `ocr` (merged).
+4. Store embeddings in `EmbeddingChunk`.
+
+### 4.3 Automatic Categorisation & Highlights
+
+- Assign exactly one `content_type` from: `recipe`, `place`, `media`, `generic`.
+- Highlights are short key points (e.g. recipe ingredients/steps; venue address/hours).
+- All outputs are user-editable (see 4.6).
+
+### 4.4 Semantic Search & Retrieval
+
+**Input:** a natural-language query, plus optional filters (labels, time range, location, status).
+**Output:** ranked list of items with relevance, each traceable to its source.
+
+**Behavior:**
+1. Parse the query into structured filters where possible (type, time, geo, status) and a search string.
+2. Retrieve candidates using vector similarity (pgvector) over `EmbeddingChunk`.
+3. Apply structured filters at the SQL layer.
+4. Rank (see 4.5) and return results.
+5. Every result is an item the user owns (RLS-enforced).
+
+**Edge cases:**
+- No matches → return an empty result set with a clear message, not an error.
+- Query with no useful text → fall back to filters only.
+
+### 4.5 Personalised Ranking
+
+- Input features: vector similarity, `Interaction` history (like/dislike/view), recency, and `ranking_weights`.
+- Likes and views increase rank; dislikes decrease it.
+- Ranking must be deterministic for the same inputs + weights.
+
+### 4.6 Verifiable Extraction & Correction
+
+- Every non-null `ExtractedField` must carry `evidence_source` and `evidence_ref`.
+- Validation: evidence text must actually exist in the transcript/OCR/caption; values failing validation are set to null and marked unverified.
+- `confidence` is exposed to the client; low-confidence fields are flagged for review.
+- User edits set `user_corrected = true`, update the value, and set `confidence = 1`.
+- Corrections update the item (and its embedding) so search reflects the fix.
+
+### 4.7 Map Visualisation
+
+- Items with resolved locations appear as markers.
+- Marker → item detail.
+
+### 4.8 Weather-Aware Itinerary Planning
+
+**Input:** a set of saved places, start/end point, date range.
+**Output:** an `ItineraryPlan` with `ItineraryStop`s, respecting opening hours and weather.
+
+**Behavior:**
+1. Classify each place `indoor` / `outdoor` / `mixed` and estimate visit duration.
+2. Group places across days and order each day into a route from start point to end point.
+3. Respect opening hours and typical meal windows.
+4. Fetch the forecast (HKO for Hong Kong, Open-Meteo elsewhere).
+5. If adverse weather is forecast, move outdoor stops to better days and notify the user.
+
+### 4.9 Shared Collections
+
+- Collections can nest via `parent_id`.
+- Items can be added to / removed from collections; batches supported.
+- Shared collections are visible to invited users; RLS governs access.
+
+---
+
+## 5. API Surface (initial)
+
+REST under `/api`. All routes require auth unless noted. All responses are JSON using shared types.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/capture` | Submit a URL (+ optional file); returns `{ itemId, status }` |
+| `GET` | `/items` | List the user's items (filters, pagination) |
+| `GET` | `/items/:id` | Item detail incl. extracted fields + evidence |
+| `PATCH` | `/items/:id/fields/:fieldId` | Correct an extracted field |
+| `POST` | `/items/:id/recapture` | Re-run extraction (optional hint) |
+| `GET` | `/search` | Query + filters → ranked items |
+| `POST` | `/interactions` | Record like/dislike/view |
+| `GET`/`POST` | `/collections` | List / create collections |
+| `POST` | `/collections/:id/items` | Add items to a collection |
+| `POST` | `/itineraries` | Generate an itinerary from selected places |
+| `GET` | `/itineraries/:id` | Retrieve an itinerary |
+| `GET` | `/health` | Liveness (no auth) |
+
+**Contract rules:**
+- Capture is always asynchronous: `POST /capture` returns fast; the client polls `GET /items/:id` for status.
+- Errors use a consistent shape: `{ error: { code, message } }`.
+- Never return raw model output; always the validated, typed shape.
+
+---
+
+## 6. Acceptance Criteria
+
+A feature is "done" only when all of these hold:
+
+- [ ] Works end-to-end on a real device/simulator through the app UI (not just via curl).
+- [ ] Types are shared between client and server and compile clean (no `any`).
+- [ ] Unit tests cover the core logic (extraction validation, ranking, scheduling).
+- [ ] Edge cases in §4 return a clear state, never a silent failure.
+- [ ] No API key is present in the mobile bundle (all third-party calls go through the backend).
+- [ ] `lsp_diagnostics` / typecheck / lint are clean.
+
+---
+
+## 7. Build Order (MVP)
+
+Build in this order; later items are optional until the earlier ones are solid.
+
+1. Monorepo scaffold + CI + Supabase schema (RLS) + local Docker DB. *(pure skeleton — no feature logic)*
+2. Auth end-to-end (Supabase Auth): sign-up/in, JWT issuance, one protected route.
+3. Mobile shell: share intake, item list, item detail.
+4. Capture pipeline for one platform end-to-end (caption → transcript → OCR).
+5. Representation, categorisation, highlights, embeddings.
+6. Vector search + filters + retrieval UI.
+7. Field correction + confidence display.
+8. Personalised ranking from interactions.
+9. Map visualisation.
+10. Collections (nested + sharing).
+11. Weather-aware itinerary planner.
+12. Optional: media/music identification, extra platforms, multi-region itineraries.
+
+---
+
+## 8. Out of Scope
+
+- Server-side scraping of platforms that block access (capture relies on user-provided media).
+- Redistributing or re-hosting original videos.
+- Music/streaming account integration (identification + search links only, if built).
+- Cross-platform price comparison / scraping e-commerce sites.
+- Multi-user social feeds beyond shared collections.
+- Offline-first sync (initial version assumes connectivity).
+
+---
+
+## 9. Key Constraints
+
+- **Privacy:** original media is deleted after processing; only derived data is stored.
+- **Legal:** only public content the user explicitly shares is processed.
+- **Reliability:** platform access may fail — `needs_media` is a first-class outcome, not an error.
+- **Cost:** cache model and external API responses; do not re-process unchanged items.
+- **Latency:** capture is async; the app must remain usable while processing.
