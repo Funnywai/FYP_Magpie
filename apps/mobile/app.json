@@ -3,12 +3,13 @@
     "name": "Magpie",
     "slug": "magpie",
     "version": "0.0.0",
-    "orientation": "default",
+    "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "hk.cuhk.magpie"
+      "bundleIdentifier": "hk.cuhk.magpie",
+      "requireFullScreen": true
     },
     "android": {
       "package": "hk.cuhk.magpie"
