@@ -21,7 +21,8 @@ export function useLayout(inTabs = true) {
     cols: bp === 'compact' ? 1 : bp === 'medium' ? 2 : 3,
     padLeft: (sidebar ? 0 : insets.left) + g,
     padRight: insets.right + g,
-    padTop: insets.top,
+    // Top inset is applied by <Screen>'s native SafeAreaView, so content padding starts at 0.
+    padTop: 0,
     // Bottom bar (compact) handles its own inset; the sidebar does not sit under content.
     padBottom: sidebar ? insets.bottom : 0,
   };

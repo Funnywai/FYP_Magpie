@@ -63,12 +63,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreference] = useState<ThemeModePreference>('system');
   const [reduceMotion, setReduceMotion] = useState(false);
   const [boldText, setBoldText] = useState(false);
+  // Fonts are bundled via @expo-google-fonts, so this resolves without network access.
   const [fontsLoaded, fontError] = useFonts(fontMap);
 
   useEffect(() => {
     void AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
-    void AccessibilityInfo.isBoldTextEnabled().then(setBoldText);
     const a = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    // Bold Text is an iOS-only setting; web has no such API and would throw.
+    if (Platform.OS !== 'ios') return () => a.remove();
+    void AccessibilityInfo.isBoldTextEnabled().then(setBoldText);
     const b = AccessibilityInfo.addEventListener('boldTextChanged', setBoldText);
     return () => {
       a.remove();
