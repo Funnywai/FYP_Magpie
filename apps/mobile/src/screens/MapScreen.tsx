@@ -118,7 +118,9 @@ export function MapScreen() {
         <Animated.View
           style={{ position: 'absolute', left: L.padLeft, right: L.padRight, bottom: L.padBottom + L.insets.bottom * 0 + 12, maxWidth: 640, alignSelf: 'center', opacity: rise, transform: [{ translateY: rise.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }}
         >
-          <Card item={selected} variant="row" onPress={() => nav.navigate('Detail', { id: selected.id })} action={<Button label={s.viewDetails} onPress={() => nav.navigate('Detail', { id: selected.id })} />} />
+          {/* The button is a sibling of the card: a button inside a button breaks the accessibility tree. */}
+          <Card item={selected} variant="row" onPress={() => nav.navigate('Detail', { id: selected.id })} />
+          <Button label={s.viewDetails} onPress={() => nav.navigate('Detail', { id: selected.id })} style={{ marginTop: 8 }} />
         </Animated.View>
       )}
     </Screen>

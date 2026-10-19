@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 
 import type { Item } from '../mocks/items';
@@ -22,11 +21,9 @@ type Props = {
   onLongPress?: () => void;
   /** At most one tilted sticker per card. */
   tilt?: boolean;
-  /** Extra control under the footer (e.g. the map's "View details"). */
-  action?: ReactNode;
 };
 
-export function Card({ item, variant, onPress, onLongPress, tilt, action }: Props) {
+export function Card({ item, variant, onPress, onLongPress, tilt }: Props) {
   // Colours and width drive the thumbnail size and borders below.
   const { colors } = useTheme();
   const { s, loc } = useLang();
@@ -78,7 +75,6 @@ export function Card({ item, variant, onPress, onLongPress, tilt, action }: Prop
           </Txt>
         </Txt>
       )}
-      {action}
     </View>
   );
 

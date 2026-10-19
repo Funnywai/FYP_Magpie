@@ -40,9 +40,13 @@ export function FieldRow({ field, onPress }: Props) {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           {field.corrected && <Tag>{s.corrected}</Tag>}
           {low && (
-            <Txt type="caption" bold color="warningText">
-              <Icon name="alert" size={14} color="warningText" /> {s.needsReview}
-            </Txt>
+            // Sibling layout: SVG cannot be nested inside native <Text>.
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Icon name="alert" size={14} color="warningText" />
+              <Txt type="caption" bold color="warningText">
+                {s.needsReview}
+              </Txt>
+            </View>
           )}
           <ConfidenceBadge value={field.confidence} />
         </View>

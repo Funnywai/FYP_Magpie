@@ -19,9 +19,13 @@ export function ErrorBanner({ message, onRetry }: Props) {
       accessibilityRole="alert"
       style={{ gap: 8, padding: 12, backgroundColor: colors.surface, borderWidth: border.width, borderColor: colors.dangerText, borderRadius: radius.card }}
     >
-      <Txt type="body" bold color="dangerText">
-        <Icon name="alert" size={18} color="dangerText" /> {message}
-      </Txt>
+      {/* Icon is a sibling of the text: SVG cannot be nested inside native <Text>. */}
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+        <Icon name="alert" size={18} color="dangerText" />
+        <Txt type="body" bold color="dangerText" style={{ flex: 1 }}>
+          {message}
+        </Txt>
+      </View>
       <Button label={s.retry} variant="secondary" onPress={onRetry} />
     </View>
   );

@@ -15,4 +15,9 @@ it('platform detection', () => {
   expect(detectPlatform('https://youtu.be/xyz')).toBe('youtube');
   expect(detectPlatform('https://www.threads.net/@a/post/1')).toBe('threads');
   expect(detectPlatform('https://example.com')).toBeNull();
+  // Untrusted hosts that merely contain a platform name must not match.
+  expect(detectPlatform('https://evil-instagram.com/reel/a')).toBeNull();
+  expect(detectPlatform('https://example.com/?u=youtube.com')).toBeNull();
+  expect(detectPlatform('https://instagram.com.evil.io/x')).toBeNull();
+  expect(detectPlatform('javascript:instagram.com')).toBeNull();
 });

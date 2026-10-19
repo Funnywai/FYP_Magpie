@@ -82,9 +82,13 @@ export function DetailScreen() {
         <StatusPill status={item.status} />
         {item.failure && (
           <View accessible style={{ gap: 4, padding: 12, backgroundColor: colors.surface, borderWidth: border.width, borderColor: colors.dangerText, borderRadius: radius.card }}>
-            <Txt type="body" bold color="dangerText">
-              <Icon name="alert" size={18} color="dangerText" /> {loc(item.failure.reason)}
-            </Txt>
+            {/* Icon beside the text, never inside it (native <Text> cannot host SVG). */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+              <Icon name="alert" size={18} color="dangerText" />
+              <Txt type="body" bold color="dangerText" style={{ flex: 1 }}>
+                {loc(item.failure.reason)}
+              </Txt>
+            </View>
             <Txt type="body">{s.nextStep}{loc(item.failure.next)}</Txt>
           </View>
         )}

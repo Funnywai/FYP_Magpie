@@ -26,9 +26,22 @@ export function confidenceLevel(percent: number): ConfidenceLevel {
   return percent >= 50 ? 'mid' : 'low';
 }
 
+// Exact registrable domains; subdomains (www., m.) are allowed, lookalikes are not.
+const platformHosts: readonly [SourcePlatform, readonly string[]][] = [
+  ['instagram', ['instagram.com', 'instagr.am']],
+  ['youtube', ['youtube.com', 'youtu.be']],
+  ['threads', ['threads.net', 'threads.com']],
+];
+
+/** Matches on the parsed hostname, so `evil.com/?u=instagram.com` is rejected. */
 export function detectPlatform(url: string): SourcePlatform | null {
-  if (/instagram\.com|instagr\.am/i.test(url)) return 'instagram';
-  if (/youtube\.com|youtu\.be/i.test(url)) return 'youtube';
-  if (/threads\.(net|com)/i.test(url)) return 'threads';
-  return null;
+  let host: string;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    host = u.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  return platformHosts.find(([, domains]) => domains.some((d) => host === d || host.endsWith(`.${d}`)))?.[0] ?? null;
 }
