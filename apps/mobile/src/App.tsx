@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { LangProvider } from './i18n/LangProvider';
 import { RootNavigator } from './navigation/RootNavigator';
 import { ItemsProvider } from './state/ItemsProvider';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -16,14 +17,16 @@ function Shell() {
   );
 }
 
-// Provider order: safe area -> theme (fonts) -> data -> navigation.
+// Provider order: safe area -> theme (fonts) -> language -> data -> navigation.
 export function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <ItemsProvider>
-          <Shell />
-        </ItemsProvider>
+        <LangProvider>
+          <ItemsProvider>
+            <Shell />
+          </ItemsProvider>
+        </LangProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
