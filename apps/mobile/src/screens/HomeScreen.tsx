@@ -34,6 +34,21 @@ function matches(item: Item, key: FilterKey): boolean {
   return item.contentType === key;
 }
 
+function matchesQuery(item: Item, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const haystack = [
+    item.title,
+    item.meta.zh,
+    item.meta.en,
+    ...item.highlights,
+    ...item.fields.map((f) => f.value),
+  ]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
 export function HomeScreen() {
   // Typed against the root stack so navigate('Detail') is checked.
   const nav = useNavigation<RootNav>();
@@ -68,8 +83,8 @@ export function HomeScreen() {
 
   // Skeleton shows for pull-to-refresh or the Settings preview.
   const loading = refreshing || demo === 'loading';
-  // Empty preview shows no rows regardless of the filter.
-  const shown = demo === 'empty' ? [] : items.filter((it) => matches(it, filter));
+  // Empty preview shows no rows regardless of the filter/query.
+  const shown = demo === 'empty' ? [] : items.filter((it) => matches(it, filter) && matchesQuery(it, query));
   // Pad the last row so a lone card keeps column width instead of stretching.
   // Rows are padded to a full multiple of the column count.
   const data: (Item | null)[] = [...shown];

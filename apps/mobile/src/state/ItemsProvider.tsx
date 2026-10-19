@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { mockItems, type Item } from '../mocks/items';
+import type { ItemStatus } from '@magpie/shared';
 
 /** Which UI state every screen should currently show (reviewable from Settings). */
 export type DemoState = 'ready' | 'loading' | 'empty' | 'error';
@@ -9,6 +10,7 @@ type ItemsApi = {
   items: Item[];
   demo: DemoState;
   setDemo: (next: DemoState) => void;
+  setStatus: (id: string, status: ItemStatus) => void;
   react: (id: string, reaction: 'like' | 'dislike') => void;
   toggleSave: (id: string) => void;
   correct: (id: string, fieldId: string, value: string) => void;
@@ -32,6 +34,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
       items,
       demo,
       setDemo,
+      setStatus: (id, status) => patch(id, (it) => ({ ...it, status })),
       // Pressing the active reaction again clears it.
       react: (id, reaction) => patch(id, (it) => ({ ...it, reaction: it.reaction === reaction ? undefined : reaction })),
       toggleSave: (id) => patch(id, (it) => ({ ...it, saved: !it.saved })),

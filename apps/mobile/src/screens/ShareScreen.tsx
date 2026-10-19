@@ -27,7 +27,7 @@ export function ShareScreen() {
   const { colors } = useTheme();
   const { s } = useLang();
   // `add` prepends the fake item to the collection list.
-  const { add } = useItems();
+  const { add, setStatus } = useItems();
   const [open, setOpen] = useState(true);
   const [url, setUrl] = useState('');
   const [phase, setPhase] = useState<ItemStatus | null>(null);
@@ -48,12 +48,13 @@ export function ShareScreen() {
 
   // Builds a placeholder item; nothing leaves the device.
   const save = () => {
+    const id = `new-${Date.now()}`;
     const item: Item = {
-      id: `new-${Date.now()}`,
+      id,
       title: s.newTitle,
       platform: platform ?? 'other',
       contentType: 'generic',
-      status: 'processing',
+      status: 'queued',
       meta: { zh: strings.zh.newMeta, en: strings.en.newMeta },
       url: url.trim(),
       art: 'sparkle',
@@ -64,11 +65,17 @@ export function ShareScreen() {
       transcript: [],
       saved: false,
     };
+    add(item);
     setPhase('queued');
-    later(STEP_MS, () => setPhase('processing'));
-    later(STEP_MS * 2, () => setPhase('done'));
+    later(STEP_MS, () => {
+      setStatus(id, 'processing');
+      setPhase('processing');
+    });
+    later(STEP_MS * 2, () => {
+      setStatus(id, 'done');
+      setPhase('done');
+    });
     later(STEP_MS * 3, () => {
-      add(item);
       close();
     });
   };

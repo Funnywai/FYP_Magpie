@@ -1,6 +1,4 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View } from 'react-native';
-
 import { TabBar } from '../components/TabBar';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ItineraryScreen } from '../screens/ItineraryScreen';
@@ -11,11 +9,6 @@ import { useTheme } from '../theme/useTheme';
 import type { TabParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
-
-/** The "+" route never renders: TabBar intercepts it and opens the Share modal. */
-function Nothing() {
-  return <View />;
-}
 
 export function TabNavigator() {
   const { reduceMotion } = useTheme();
@@ -29,7 +22,8 @@ export function TabNavigator() {
     >
       <Tab.Screen name="Collection" component={HomeScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
-      <Tab.Screen name="ShareTab" component={Nothing} />
+      {/* Fallback avoids a blank screen if state restore or deep link lands on ShareTab. */}
+      <Tab.Screen name="ShareTab" component={HomeScreen} />
       <Tab.Screen name="Itinerary" component={ItineraryScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
