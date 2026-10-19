@@ -1,4 +1,6 @@
-import type { ContentType, ItemStatus, SourcePlatform } from '@magpie/shared';
+import type { ItemStatus, SourcePlatform } from '@magpie/shared';
+
+import type { IconName } from '../components/Icon';
 
 export const platformLabel: Record<SourcePlatform, string> = {
   instagram: 'IG',
@@ -7,20 +9,13 @@ export const platformLabel: Record<SourcePlatform, string> = {
   other: 'WEB',
 };
 
-export const contentLabel: Record<ContentType, string> = {
-  recipe: '食譜',
-  place: '地點',
-  media: '影視',
-  generic: '其他',
-};
-
-/** Every status carries an icon AND text, never colour alone. */
-export const statusLabel: Record<ItemStatus, { icon: string; text: string }> = {
-  queued: { icon: '⏳', text: '排隊中' },
-  processing: { icon: '◔', text: '處理中' },
-  done: { icon: '✓', text: '已完成' },
-  needs_media: { icon: '🎞', text: '需要錄影' },
-  failed: { icon: '✕', text: '失敗' },
+/** Every status pairs one of these SVG icons with its translated text, never colour alone. */
+export const statusIcon: Record<ItemStatus, IconName> = {
+  queued: 'clock',
+  processing: 'loader',
+  done: 'check',
+  needs_media: 'film',
+  failed: 'close',
 };
 
 export type ConfidenceLevel = 'high' | 'mid' | 'low';
@@ -29,11 +24,6 @@ export type ConfidenceLevel = 'high' | 'mid' | 'low';
 export function confidenceLevel(percent: number): ConfidenceLevel {
   if (percent >= 80) return 'high';
   return percent >= 50 ? 'mid' : 'low';
-}
-
-/** Spoken form for screen readers: the review flag is part of the sentence. */
-export function confidenceSpeech(percent: number): string {
-  return `信心 ${percent}%${percent < 50 ? '，請核對' : ''}`;
 }
 
 export function detectPlatform(url: string): SourcePlatform | null {
