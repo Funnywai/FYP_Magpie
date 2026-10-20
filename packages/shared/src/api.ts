@@ -66,6 +66,7 @@ export interface CorrectFieldResponse {
 export interface SearchQuery {
   q: string;
   contentType?: ContentType;
+  labels?: string[];
   from?: string;
   to?: string;
   status?: ItemStatus;

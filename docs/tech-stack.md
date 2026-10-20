@@ -23,7 +23,7 @@ Supabase (Postgres) database, with a single set of shared TypeScript types.
 | **Backend** | Node.js + TypeScript | Node `>= 22.13` / TS `~6.0.3` | Server runtime + language |
 | | Hono | `4.13.12` | REST API framework |
 | | @hono/node-server | `2.1.3` | Runs Hono on Node |
-| **Media processing** | ffmpeg | `7` (planned, not installed) | Audio extraction + scene-based frame sampling |
+| **Media processing** | ffmpeg | `7` (required for Phase 1, not installed) | Audio extraction + scene-based frame sampling |
 | **Database** | PostgreSQL (Supabase) | PG `17` | Primary datastore |
 | | pgvector | built-in | Vector similarity search (semantic search) |
 | | Supabase RLS | — | Row-Level Security (per-user isolation) |
