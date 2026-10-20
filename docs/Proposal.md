@@ -512,6 +512,8 @@ Represents a single stop within an itinerary day.
 - Store only the data functionally required, and avoid redistributing original videos
 - Delete original media after processing, retaining only derived data and thumbnails
 - Document data handling practices in accordance with university ethics guidelines
+- Restrict server-side fetching to a bounded transient path: one embed-page request per explicitly shared URL, transient media processing in OS temp storage, deletion within the same request, and no in-app playback or public URLs.
+- Publish terms that place the rights warranty on the user and operate a monitored takedown channel that removes derived data, not only the media.
 
 ### 10.3 AI Extraction Quality and Hallucination
 
