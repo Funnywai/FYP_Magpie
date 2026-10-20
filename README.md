@@ -2,7 +2,7 @@
 
 A mobile app that captures short-form social media content and makes it searchable by meaning.
 
-**Read [`docs/SPEC.md`](docs/SPEC.md) before implementing anything.** It is the source of truth for behaviour, data model, and API contracts. [`docs/Proposal.md`](docs/Proposal.md) is academic background only — SPEC wins on any conflict.
+**Read [`docs/SPEC.md`](docs/SPEC.md) before implementing anything.** It is the source of truth for behaviour, data model, and API contracts. [`docs/Proposal.md`](docs/Proposal.md) is academic background only — SPEC wins on any conflict. [`docs/tech-stack.md`](docs/tech-stack.md) lists the tools and versions in use.
 
 ## Status
 

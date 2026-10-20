@@ -29,6 +29,7 @@ export interface SavedItem {
   status: ItemStatus;
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;
+  statusReason: string | null;
 }
 
 /** SPEC §3.4 */
