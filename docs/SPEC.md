@@ -66,8 +66,8 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | Field | Type | Notes |
 | --- | --- | --- |
 | `user_id` | uuid FK → User | |
-| `preferred_categories` | text[] | |
-| `preferred_tags` | text[] | |
+| `preferred_content_types` | text[] | subset of recipe \| place \| media \| generic |
+| `preferred_labels` | text[] | preferred semantic labels (matches SavedItem.labels) |
 | `language_preference` | text[] | e.g. yue, zh, en |
 | `ranking_weights` | jsonb | learned weights for the ranking module |
 
@@ -267,8 +267,8 @@ Phase 1 removes the 80-character caption heuristic and per-category sufficiency 
 
 ### 4.5 Personalised Ranking
 
-- Input features: vector similarity, `Interaction` history (like/dislike/view), recency, and `ranking_weights`.
-- Likes and views increase rank; dislikes decrease it.
+- Input features: vector similarity, `Interaction` history (like/dislike/view), recency, `ranking_weights`, `preferred_content_types`, and `preferred_labels`.
+- Likes and views increase rank; dislikes decrease it. Content-type and label preferences boost matching items; they do not override vector relevance.
 - Ranking must be deterministic for the same inputs + weights.
 
 ### 4.6 Verifiable Extraction & Correction

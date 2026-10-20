@@ -181,8 +181,8 @@ export interface User {
 export interface PreferenceProfile {
   id: Uuid;
   userId: Uuid;
-  preferredCategories: string[];
-  preferredTags: string[];
+  preferredContentTypes: ContentType[];
+  preferredLabels: string[];
   languagePreference: Language[];
   rankingWeights: Record<string, number>;
   createdAt: IsoTimestamp;

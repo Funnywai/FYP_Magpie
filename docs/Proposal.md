@@ -332,8 +332,8 @@ Stores user preferences used to personalise ranking and recommendations.
 | Field | Description |
 | --- | --- |
 | `user_id` | Foreign key to User |
-| `preferred_categories` | Array of preferred content categories |
-| `preferred_tags` | Array of frequently engaged tags |
+| `preferred_content_types` | Array of preferred content types (recipe, place, media, generic) |
+| `preferred_labels` | Array of preferred semantic labels |
 | `language_preference` | Preferred content languages (e.g., Cantonese, Chinese, English) |
 | `ranking_weights` | Learned weights used by the ranking module (JSON) |
 
