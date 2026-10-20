@@ -195,9 +195,18 @@ Each feature below is a contract. "Done" is defined in §6.
    - Other platforms → fetch page metadata (title, description, thumbnail).
    - If no usable media and the platform blocks access → set status `needs_media`, store the reason, and prompt the user to share a video file / screen recording.
 4. From usable media: extract audio and select frames (scene detection, capped count).
-5. Transcribe audio (Cantonese-aware) and OCR frames. Set `transcript_status` to `processed` when a transcript exists, `not_applicable` when the source has no speech, or `skipped` when a video is processed caption-only.
+5. Transcribe audio (Cantonese-aware) and OCR frames. Set `transcript_status` to `processed` when ASR completes, `not_applicable` when the source has no audio track, or `skipped` when a video is processed caption-only; keep `pending` until then.
 6. Set status `processing → done`. Persist every intermediate artefact so retries resume from the last completed step.
 7. Delete the original media after `done`. Once media storage is enabled (Step 4), keep only derived assets (thumbnails, transcript, frames).
+
+`transcript_status` semantics:
+
+- `pending` — queued, processing, needs_media, or failed; ASR has not produced a transcript.
+- `processed` — ASR completed; it may return zero segments if no speech was detected.
+- `not_applicable` — the source has no audio track (e.g. GraphImage).
+- `skipped` — video processed caption-only; ASR was not run.
+
+Only `skipped` triggers the "speech was not processed" UI notice.
 
 **Edge cases:**
 - Unreachable/private/expired URL → `failed` with a readable reason.
@@ -222,7 +231,7 @@ Instagram publishes no public content API. This branch is bounded to a single pu
 | `GraphVideo` | Transient media path (audio + frames). |
 | `GraphVideo`, transient path fails | `needs_media` with a user-visible reason and next step. |
 
-`video_first` fetches every `GraphVideo` to maximise extraction accuracy. `never` disables the transient path for demos or offline runs; every item is caption-only. A caption-only `GraphVideo` is `done` with `transcript_status` `skipped`, and the UI must state that speech was not processed. `GraphImage` items set `transcript_status` `not_applicable` and need no such notice.
+`video_first` fetches every `GraphVideo` to maximise extraction accuracy. `never` disables the transient path for demos or offline runs; every Instagram item is caption-only. A caption-only `GraphVideo` is `done` with `transcript_status` `skipped`, and the UI must state that speech was not processed. `GraphImage` items set `transcript_status` `not_applicable` and need no such notice.
 
 Phase 1 removes the 80-character caption heuristic and per-category sufficiency rules. Phase 2 may add a caption-sufficiency classifier as a cost optimisation, measured against a labelled set of real reels.
 
