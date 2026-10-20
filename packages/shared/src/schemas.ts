@@ -43,7 +43,7 @@ export const extractedFieldSchema = z.object({
  * (SPEC §4.2–4.3). Every non-null field carries evidence.
  */
 export const extractionResultSchema = z.object({
-  category: contentTypeSchema,
+  contentType: contentTypeSchema,
   labels: z.array(z.string()),
   highlights: z.array(z.string()),
   fields: z.array(extractedFieldSchema),

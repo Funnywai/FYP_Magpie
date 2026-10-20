@@ -17,7 +17,7 @@ A mobile app that captures short-form social media content (Instagram Reels, You
 User shares a public URL to the app
   → system fetches caption + audio transcript + on-screen text (OCR)
   → fuses them into one item representation
-  → generates category + semantic labels + key highlights + embedding
+  → generates content_type + semantic labels + key highlights + embedding
   → stores item and indexes it
   → user finds it later via natural-language search, filters, or map
   → (optionally) turns saved places into a weather-aware itinerary
@@ -66,8 +66,8 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | Field | Type | Notes |
 | --- | --- | --- |
 | `user_id` | uuid FK → User | |
-| `preferred_categories` | text[] | |
-| `preferred_tags` | text[] | |
+| `preferred_content_types` | text[] | subset of recipe \| place \| media \| generic |
+| `preferred_labels` | text[] | preferred semantic labels (matches SavedItem.labels) |
 | `language_preference` | text[] | e.g. yue, zh, en |
 | `ranking_weights` | jsonb | learned weights for the ranking module |
 
@@ -81,8 +81,9 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | `title` | text | nullable |
 | `caption` | text | nullable |
 | `highlights` | jsonb | generated key points |
-| `category` | text | assigned category |
+| `labels` | text[] | semantic labels (topic, intent, location, entities) |
 | `status` | text | queued \| processing \| done \| needs_media \| failed |
+| `transcript_status` | text | pending \| processed \| not_applicable \| skipped |
 | `status_reason` | text | nullable; user-visible reason for terminal non-done status (`needs_media`, `failed`); optional for `processing` |
 | `capture_state` | jsonb | completed capture steps + failure reason; enables resuming from the last completed step |
 
@@ -187,16 +188,25 @@ Each feature below is a contract. "Done" is defined in §6.
 **Output:** a `SavedItem` in status `done` with all applicable artifacts: caption, transcript, frames, and extracted fields; or `needs_media` with a reason.
 
 **Behavior:**
-1. Create a `SavedItem` with status `queued`; return the id immediately (do not block the client).
+1. Create a `SavedItem` with status `queued` and `transcript_status` `pending`; return the id immediately (do not block the client).
 2. Resolve the platform from the URL host.
 3. Capture strategy, in order:
    - YouTube URL → pass directly to the model provider (public video).
    - Other platforms → fetch page metadata (title, description, thumbnail).
    - If no usable media and the platform blocks access → set status `needs_media`, store the reason, and prompt the user to share a video file / screen recording.
 4. From usable media: extract audio and select frames (scene detection, capped count).
-5. Transcribe audio (Cantonese-aware) and OCR frames.
+5. Transcribe audio (Cantonese-aware) and OCR frames. Set `transcript_status` to `processed` when ASR completes, `not_applicable` when the source has no audio track, or `skipped` when a video is processed caption-only; keep `pending` until then.
 6. Set status `processing → done`. Persist every intermediate artefact so retries resume from the last completed step.
 7. Delete the original media after `done`. Once media storage is enabled (Step 4), keep only derived assets (thumbnails, transcript, frames).
+
+`transcript_status` semantics:
+
+- `pending` — ASR has not produced a transcript (regardless of item status).
+- `processed` — ASR completed; it may return zero segments if no speech was detected.
+- `not_applicable` — the source has no audio track (e.g. GraphImage).
+- `skipped` — video processed caption-only; ASR was not run.
+
+Only `skipped` triggers the "speech was not processed" UI notice.
 
 **Edge cases:**
 - Unreachable/private/expired URL → `failed` with a readable reason.
@@ -213,18 +223,17 @@ Instagram publishes no public content API. This branch is bounded to a single pu
 
 **Parsing.** The parser is a pure function: no network, no database. Read the caption at `edge_media_to_caption.edges[0].node.text`. Use three ordered sources: (1) a balanced-brace slice starting at the `"edge_media_to_caption"` key, parsed with `JSON.parse`; (2) the same slice unescaped exactly once, parsed again; (3) `og:description`, `"owner":{"username":...}`, and `"video_url"` as independent fallbacks. Never globally replace `\"` with `"`: captions containing quotes break. The balanced-brace scanner must respect string literals, escapes, and nested braces. Accept `video_url` only after `new URL()` validation. Use `data-media-type` to distinguish `GraphVideo` from `GraphImage`.
 
-**Media policy.** Controlled by `MAGPIE_IG_MEDIA_POLICY`, values `caption_first` (default), `always`, `never`.
+**Media policy.** Controlled by `MAGPIE_IG_MEDIA_POLICY`, values `video_first` (default), `never`.
 
-| Media type | Caption length | Action |
-| --- | --- | --- |
-| `GraphImage` | any | Caption only, no media download. |
-| `GraphVideo` | ≥ 80 characters | Caption only, no transcript; the UI must state that speech was not processed. |
-| `GraphVideo` | < 80 characters | Transient media path. |
-| `GraphVideo` | < 80 characters, transient path fails | `needs_media` with a user-visible reason and next step. |
+| Media type | Action |
+| --- | --- |
+| `GraphImage` | Caption only, no media download. |
+| `GraphVideo` | Transient media path (audio + frames). |
+| `GraphVideo`, transient path fails | `needs_media` with a user-visible reason and next step. |
 
-`always` forces the transient path for every `GraphVideo` (used for demos); `never` disables it entirely.
+`video_first` fetches every `GraphVideo` to maximise extraction accuracy. `never` disables the transient path for demos or offline runs; every Instagram item is caption-only. A caption-only `GraphVideo` is `done` with `transcript_status` `skipped`, and the UI must state that speech was not processed. `GraphImage` items set `transcript_status` `not_applicable` and need no such notice.
 
-Caption-only items are `done`; `transcript` is absent, and the UI must state that speech was not processed.
+Phase 1 removes the 80-character caption heuristic and per-category sufficiency rules. Phase 2 may add a caption-sufficiency classifier as a cost optimisation, measured against a labelled set of real reels.
 
 **Transient path.** Download to `os.tmpdir()/magpie/{itemId}/`, never Supabase Storage, never a CDN, never a public URL. 200 MB cap, `content-type: video/*` validation, overall timeout. Extract audio with `ffmpeg -vn -ac 1 -ar 16000`. Extract frames with `select='gt(scene,0.3)'`, at most 5 frames, downscaled to 480 px wide JPEG q70 before OCR. Delete the whole temp directory in a `finally` block, on success and on failure. Sweep stale temp directories at startup.
 
@@ -233,17 +242,19 @@ Caption-only items are `done`; `transcript` is absent, and the UI must state tha
 ### 4.2 Representation & Semantic Labelling
 
 **Input:** caption + transcript + OCR text.
-**Output:** `highlights`, `category`, semantic labels, and embedding chunks.
+**Output:** `highlights`, `content_type`, semantic labels, and embedding chunks.
 
 **Behavior:**
 1. Fuse the three text sources into one representation.
-2. Generate: category, semantic labels (topic, intent, location, entities), and key highlights.
-3. Produce embedding chunks: `structured_card` (title + category + key fields), `transcript` (per ~30–45s segment), `ocr` (merged).
+2. Generate: content_type, semantic labels (topic, intent, location, entities), and key highlights.
+3. Produce embedding chunks: `structured_card` (title + content_type + key fields), `transcript` (per ~30–45s segment), `ocr` (merged).
 4. Store embeddings in `EmbeddingChunk`.
 
 ### 4.3 Automatic Categorisation & Highlights
 
-- Assign exactly one `content_type` from: `recipe`, `place`, `media`, `generic`.
+- Assign exactly one `content_type` from: `recipe`, `place`, `media`, `generic`. Use `generic` when no other type fits; do not invent new content types.
+- Classification is Gemini multimodal structured output, not a separate taxonomy.
+- Store fine-grained labels in `labels` (e.g. `japanese_restaurant`, `pasta`); do not store a separate category.
 - Highlights are short key points (e.g. recipe ingredients/steps; venue address/hours).
 - All outputs are user-editable (see 4.6).
 
@@ -265,8 +276,8 @@ Caption-only items are `done`; `transcript` is absent, and the UI must state tha
 
 ### 4.5 Personalised Ranking
 
-- Input features: vector similarity, `Interaction` history (like/dislike/view), recency, and `ranking_weights`.
-- Likes and views increase rank; dislikes decrease it.
+- Input features: vector similarity, `Interaction` history (like/dislike/view), recency, `ranking_weights`, `preferred_content_types`, and `preferred_labels`.
+- Likes and views increase rank; dislikes decrease it. Content-type and label preferences boost matching items; they do not override vector relevance.
 - Ranking must be deterministic for the same inputs + weights.
 
 ### 4.6 Verifiable Extraction & Correction

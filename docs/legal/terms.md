@@ -34,7 +34,7 @@ These terms are a working draft. They describe how Magpie is intended to operate
 
 3.1 You grant Magpie a limited licence to process the content you submit, only for the purpose of providing the service to you.
 
-3.2 The licence covers transient processing: fetching the page, reading its metadata, and, where needed, downloading media to temporary storage for transcription and text extraction.
+3.2 The licence covers transient processing: fetching the page, reading its metadata, and, for video posts, downloading the video to temporary storage for transcription and text extraction.
 
 3.3 Original media is deleted after processing, within the same request. It is not kept in Magpie's storage, not placed on a CDN, and not given a public URL.
 
