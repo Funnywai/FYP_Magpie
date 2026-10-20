@@ -205,7 +205,7 @@ Instagram publishes no public content API. This branch is bounded to a single pu
 
 **URL normalization.** Accept `instagram.com/reel/{sc}`, `instagram.com/reels/{sc}`, and `instagram.com/p/{sc}`. Strip tracking parameters such as `rpxt` and `exln`. A URL with no shortcode returns `failed` with `unsupported_url`.
 
-**Embed fetch.** One `GET https://www.instagram.com/reel/{shortcode}/embed/` per explicitly shared URL. 8 s timeout, 2 retries with backoff, no cookies, no proxy pool, no headless browser, no account or feed crawling.
+**Embed fetch.** One logical embed fetch per explicitly shared URL: a single `GET https://www.instagram.com/reel/{shortcode}/embed/` plus at most 2 retries with backoff (3 requests total), 8 s timeout per attempt, no cookies, no proxy pool, no headless browser, no account or feed crawling.
 
 **Parsing.** The parser is a pure function: no network, no database. Read the caption at `edge_media_to_caption.edges[0].node.text`. Use three ordered sources: (1) a balanced-brace slice starting at the `"edge_media_to_caption"` key, parsed with `JSON.parse`; (2) the same slice unescaped exactly once, parsed again; (3) `og:description`, `"owner":{"username":...}`, and `"video_url"` as independent fallbacks. Never globally replace `\"` with `"`: captions containing quotes break. The balanced-brace scanner must respect string literals, escapes, and nested braces. Accept `video_url` only after `new URL()` validation. Use `data-media-type` to distinguish `GraphVideo` from `GraphImage`.
 
@@ -305,6 +305,7 @@ REST under `/api`. All routes require auth unless noted. All responses are JSON 
 | `POST` | `/capture` | Submit a URL (+ optional file); returns `{ itemId, status }` |
 | `GET` | `/items` | List the user's items (filters, pagination) |
 | `GET` | `/items/:id` | Item detail incl. extracted fields + evidence |
+| `DELETE` | `/items/:id` | Delete an item and all derived data |
 | `PATCH` | `/items/:id/fields/:fieldId` | Correct an extracted field |
 | `POST` | `/items/:id/recapture` | Re-run extraction (optional hint) |
 | `GET` | `/search` | Query + filters → ranked items |
@@ -356,7 +357,7 @@ Build in this order; later items are optional until the earlier ones are solid.
 
 ## 8. Out of Scope
 
-- Unbounded or bulk server-side scraping. Server-side fetching is permitted only through the bounded, per-request pipeline for a single public URL the user explicitly shared: one embed-page request, no cookies, no proxy pool, no headless browser, no crawling of accounts, feeds, or other users' content.
+- Unbounded or bulk server-side scraping. Server-side fetching is permitted only through the bounded, per-request pipeline for a single public URL the user explicitly shared: one logical embed fetch (initial attempt plus bounded retries), no cookies, no proxy pool, no headless browser, no crawling of accounts, feeds, or other users' content.
 - Persistent storage or re-hosting of original media. Original video and audio may exist only as transient files outside the storage layer, deleted within the same request in a `finally` block — no public URL, no CDN, no in-app playback of another party's media.
 - Redistributing original videos or operating a mirror of any platform's content.
 - Music/streaming account integration (identification + search links only, if built).
@@ -373,5 +374,5 @@ Build in this order; later items are optional until the earlier ones are solid.
 - **Reliability:** platform access may fail — `needs_media` is a first-class outcome, not an error.
 - **Cost:** cache model and external API responses; do not re-process unchanged items.
 - **Latency:** capture is async; the app must remain usable while processing.
-- **Bounded processing:** server-side fetching is limited to the bounded, per-request pipeline for a single public URL the user explicitly shared: one embed-page request, no cookies, no proxy pool, no headless browser, no crawling, and transient media deleted within the same request.
+- **Bounded processing:** server-side fetching is limited to the bounded, per-request pipeline for a single public URL the user explicitly shared: one logical embed fetch (initial attempt plus bounded retries), no cookies, no proxy pool, no headless browser, no crawling, and transient media deleted within the same request.
 - **Terms and takedown:** user-submitted content is governed by the in-app terms (user warranty, transient-processing licence, rights defects borne by the user), and a monitored takedown channel deletes the item and all derived data — transcript, frames, extracted fields, embeddings — not only the media.
