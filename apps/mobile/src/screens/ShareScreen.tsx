@@ -39,8 +39,15 @@ export function ShareScreen() {
   const platform = detectPlatform(url.trim());
   // Small helper that registers a cancellable timeout.
   const later = (ms: number, fn: () => void) => timers.current.push(setTimeout(fn, ms));
+  // Pipeline timers are untracked on purpose: closing the sheet must not strand the item in `queued`.
+  // ponytail: fake pipeline only; a real backend job replaces these timers.
+  const run = (ms: number, fn: () => void) => void setTimeout(fn, ms);
+  // Guards against the auto-close and a manual close both calling goBack().
+  const closing = useRef(false);
   // Close = slide out first, then pop the route.
   const close = () => {
+    if (closing.current) return;
+    closing.current = true;
     setOpen(false);
     // Let the sheet slide out before the route is removed.
     later(250, () => nav.goBack());
@@ -67,15 +74,15 @@ export function ShareScreen() {
     };
     add(item);
     setPhase('queued');
-    later(STEP_MS, () => {
+    run(STEP_MS, () => {
       setStatus(id, 'processing');
       setPhase('processing');
     });
-    later(STEP_MS * 2, () => {
+    run(STEP_MS * 2, () => {
       setStatus(id, 'done');
       setPhase('done');
     });
-    later(STEP_MS * 3, () => {
+    run(STEP_MS * 3, () => {
       close();
     });
   };
