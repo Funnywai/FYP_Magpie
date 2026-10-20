@@ -14,6 +14,7 @@ export type IsoTimestamp = string;
 export type SourcePlatform = 'instagram' | 'youtube' | 'threads' | 'other';
 export type ContentType = 'recipe' | 'place' | 'media' | 'generic';
 export type ItemStatus = 'queued' | 'processing' | 'done' | 'needs_media' | 'failed';
+export type TranscriptStatus = 'pending' | 'processed' | 'not_applicable' | 'skipped';
 
 export interface CaptureState {
   completedSteps: string[];
@@ -32,6 +33,7 @@ export interface SavedItem {
   highlights: unknown[];
   labels: string[];
   status: ItemStatus;
+  transcriptStatus: TranscriptStatus;
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;
   statusReason: string | null;

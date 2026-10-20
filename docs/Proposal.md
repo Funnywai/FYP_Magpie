@@ -352,6 +352,7 @@ Represents a single captured piece of content.
 | `highlights` | Generated key points (JSON) |
 | `labels` | Semantic labels (topic, intent, location, entities) |
 | `status` | Processing status (queued, processing, done, needs_media, failed) |
+| `transcript_status` | Transcript processing state (pending, processed, not_applicable, skipped) |
 | `status_reason` | User-visible reason when status is `needs_media` or `failed` |
 | `capture_state` | Completed capture steps and failure reason (JSON), enables resume |
 

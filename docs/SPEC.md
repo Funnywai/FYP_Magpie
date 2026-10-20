@@ -83,6 +83,7 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | `highlights` | jsonb | generated key points |
 | `labels` | text[] | semantic labels (topic, intent, location, entities) |
 | `status` | text | queued \| processing \| done \| needs_media \| failed |
+| `transcript_status` | text | pending \| processed \| not_applicable \| skipped |
 | `status_reason` | text | nullable; user-visible reason for terminal non-done status (`needs_media`, `failed`); optional for `processing` |
 | `capture_state` | jsonb | completed capture steps + failure reason; enables resuming from the last completed step |
 
@@ -187,14 +188,14 @@ Each feature below is a contract. "Done" is defined in §6.
 **Output:** a `SavedItem` in status `done` with all applicable artifacts: caption, transcript, frames, and extracted fields; or `needs_media` with a reason.
 
 **Behavior:**
-1. Create a `SavedItem` with status `queued`; return the id immediately (do not block the client).
+1. Create a `SavedItem` with status `queued` and `transcript_status` `pending`; return the id immediately (do not block the client).
 2. Resolve the platform from the URL host.
 3. Capture strategy, in order:
    - YouTube URL → pass directly to the model provider (public video).
    - Other platforms → fetch page metadata (title, description, thumbnail).
    - If no usable media and the platform blocks access → set status `needs_media`, store the reason, and prompt the user to share a video file / screen recording.
 4. From usable media: extract audio and select frames (scene detection, capped count).
-5. Transcribe audio (Cantonese-aware) and OCR frames.
+5. Transcribe audio (Cantonese-aware) and OCR frames. Set `transcript_status` to `processed` when a transcript exists, `not_applicable` when the source has no speech, or `skipped` when a video is processed caption-only.
 6. Set status `processing → done`. Persist every intermediate artefact so retries resume from the last completed step.
 7. Delete the original media after `done`. Once media storage is enabled (Step 4), keep only derived assets (thumbnails, transcript, frames).
 
@@ -213,18 +214,17 @@ Instagram publishes no public content API. This branch is bounded to a single pu
 
 **Parsing.** The parser is a pure function: no network, no database. Read the caption at `edge_media_to_caption.edges[0].node.text`. Use three ordered sources: (1) a balanced-brace slice starting at the `"edge_media_to_caption"` key, parsed with `JSON.parse`; (2) the same slice unescaped exactly once, parsed again; (3) `og:description`, `"owner":{"username":...}`, and `"video_url"` as independent fallbacks. Never globally replace `\"` with `"`: captions containing quotes break. The balanced-brace scanner must respect string literals, escapes, and nested braces. Accept `video_url` only after `new URL()` validation. Use `data-media-type` to distinguish `GraphVideo` from `GraphImage`.
 
-**Media policy.** Controlled by `MAGPIE_IG_MEDIA_POLICY`, values `caption_first` (default), `always`, `never`.
+**Media policy.** Controlled by `MAGPIE_IG_MEDIA_POLICY`, values `video_first` (default), `never`.
 
-| Media type | Caption length | Action |
-| --- | --- | --- |
-| `GraphImage` | any | Caption only, no media download. |
-| `GraphVideo` | ≥ 80 characters | Caption only, no transcript; the UI must state that speech was not processed. |
-| `GraphVideo` | < 80 characters | Transient media path. |
-| `GraphVideo` | < 80 characters, transient path fails | `needs_media` with a user-visible reason and next step. |
+| Media type | Action |
+| --- | --- |
+| `GraphImage` | Caption only, no media download. |
+| `GraphVideo` | Transient media path (audio + frames). |
+| `GraphVideo`, transient path fails | `needs_media` with a user-visible reason and next step. |
 
-`always` forces the transient path for every `GraphVideo` (used for demos); `never` disables it entirely.
+`video_first` fetches every `GraphVideo` to maximise extraction accuracy. `never` disables the transient path for demos or offline runs; every item is caption-only. A caption-only `GraphVideo` is `done` with `transcript_status` `skipped`, and the UI must state that speech was not processed. `GraphImage` items set `transcript_status` `not_applicable` and need no such notice.
 
-Caption-only items are `done`; `transcript` is absent, and the UI must state that speech was not processed.
+Phase 1 removes the 80-character caption heuristic and per-category sufficiency rules. Phase 2 may add a caption-sufficiency classifier as a cost optimisation, measured against a labelled set of real reels.
 
 **Transient path.** Download to `os.tmpdir()/magpie/{itemId}/`, never Supabase Storage, never a CDN, never a public URL. 200 MB cap, `content-type: video/*` validation, overall timeout. Extract audio with `ffmpeg -vn -ac 1 -ar 16000`. Extract frames with `select='gt(scene,0.3)'`, at most 5 frames, downscaled to 480 px wide JPEG q70 before OCR. Delete the whole temp directory in a `finally` block, on success and on failure. Sweep stale temp directories at startup.
 
@@ -243,7 +243,8 @@ Caption-only items are `done`; `transcript` is absent, and the UI must state tha
 
 ### 4.3 Automatic Categorisation & Highlights
 
-- Assign exactly one `content_type` from: `recipe`, `place`, `media`, `generic`.
+- Assign exactly one `content_type` from: `recipe`, `place`, `media`, `generic`. Use `generic` when no other type fits; do not invent new content types.
+- Classification is Gemini multimodal structured output, not a separate taxonomy.
 - Store fine-grained labels in `labels` (e.g. `japanese_restaurant`, `pasta`); do not store a separate category.
 - Highlights are short key points (e.g. recipe ingredients/steps; venue address/hours).
 - All outputs are user-editable (see 4.6).
