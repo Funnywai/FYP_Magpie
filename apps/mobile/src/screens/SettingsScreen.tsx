@@ -5,6 +5,7 @@ import { Screen } from '../components/Screen';
 import { Segmented } from '../components/Segmented';
 import { Txt } from '../components/Txt';
 import { useLang } from '../i18n/LangProvider';
+import { useItems, type DemoState } from '../state/ItemsProvider';
 import { border, radius } from '../theme/tokens';
 import type { ThemeModePreference } from '../theme/tokens';
 import { useLayout } from '../theme/useLayout';
@@ -35,6 +36,14 @@ function Row({ title, children }: { title: string; children: ReactNode }) {
 export function SettingsScreen() {
   const { preference, setPreference } = useTheme();
   const { lang, setLang, s } = useLang();
+  const { demo, setDemo } = useItems();
+  // Review aid, not a product feature: forces every screen into a given state.
+  const demoStates = [
+    { value: 'ready', label: s.demoReady },
+    { value: 'loading', label: s.demoLoading },
+    { value: 'empty', label: s.demoEmpty },
+    { value: 'error', label: s.demoError },
+  ] as const satisfies readonly { value: DemoState; label: string }[];
   const L = useLayout();
   // `satisfies` checks the options against the real token types without widening them.
   const appearance = [
@@ -80,6 +89,12 @@ export function SettingsScreen() {
             value={lang}
             onChange={setLang}
           />
+        </Row>
+        <Row title={s.demoState}>
+          <Segmented label={s.demoState} options={demoStates} value={demo} onChange={setDemo} />
+          <Txt type="caption" color="textSecondary">
+            {s.demoHint}
+          </Txt>
         </Row>
       </ScrollView>
     </Screen>
