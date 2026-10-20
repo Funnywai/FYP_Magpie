@@ -201,7 +201,7 @@ Each feature below is a contract. "Done" is defined in §6.
 
 `transcript_status` semantics:
 
-- `pending` — queued, processing, needs_media, or failed; ASR has not produced a transcript.
+- `pending` — ASR has not produced a transcript (regardless of item status).
 - `processed` — ASR completed; it may return zero segments if no speech was detected.
 - `not_applicable` — the source has no audio track (e.g. GraphImage).
 - `skipped` — video processed caption-only; ASR was not run.
