@@ -85,6 +85,7 @@ export function HomeScreen() {
   const loading = refreshing || demo === 'loading';
   // Empty preview shows no rows regardless of the filter/query.
   const shown = demo === 'empty' ? [] : items.filter((it) => matches(it, filter) && matchesQuery(it, query));
+  const noMatch = demo !== 'empty' && items.length > 0;
   // Pad the last row so a lone card keeps column width instead of stretching.
   // Rows are padded to a full multiple of the column count.
   const data: (Item | null)[] = [...shown];
@@ -147,10 +148,12 @@ export function HomeScreen() {
     </View>
   ) : (
     <EmptyState
-      title={s.emptyTitle}
-      hint={s.emptyHint}
-      actionLabel={s.showAll}
+      // Items exist but nothing matches: say "no matches" rather than the first-use copy.
+      title={noMatch ? s.noMatchTitle : s.emptyTitle}
+      hint={noMatch ? s.noMatchHint : s.emptyHint}
+      actionLabel={noMatch ? s.clearFilters : s.showAll}
       onAction={() => {
+        setQuery('');
         setFilter('all');
         setDemo('ready');
       }}
