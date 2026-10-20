@@ -83,19 +83,23 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | `highlights` | jsonb | generated key points |
 | `category` | text | assigned category |
 | `status` | text | queued \| processing \| done \| needs_media \| failed |
-| status_reason | text | nullable；非 done 狀態的使用者可見原因 |
-| capture_state | jsonb | completed capture steps + failure reason; enables resuming from the last completed step |
+| `status_reason` | text | nullable; user-visible reason for non-done status |
+| `capture_state` | jsonb | completed capture steps + failure reason; enables resuming from the last completed step |
 
 ### 3.4 MediaAsset
 | Field | Type | Notes |
 | --- | --- | --- |
 | `item_id` | uuid FK → SavedItem | |
-| `asset_type` | text | thumbnail \| audio \| frame |
+| `asset_type` | text | thumbnail \| frame \| audio (user-provided only) |
 | `storage_path` | text | object storage path |
 | `timestamp_seconds` | numeric | nullable; for frames |
 | `ocr_text` | text | nullable |
 
-`frame` assets are downscaled stills (480 px wide, JPEG q70) retained as OCR evidence, stored in a private bucket, owner-readable only, deleted with the item, never publicly addressable.
+`frame` assets are downscaled stills (480 px wide, JPEG q70) retained as OCR evidence. When media storage is enabled (Step 4), they will be stored in a private bucket, owner-readable only, deleted with the item, never publicly addressable.
+
+`audio` assets are only for audio the user supplies. Audio extracted from platform media is transient and never stored.
+
+Bucket provisioning (private bucket + owner-read RLS) is planned for Step 4; until then no media is persisted.
 
 ### 3.5 TranscriptSegment
 | Field | Type | Notes |
@@ -180,7 +184,7 @@ Each feature below is a contract. "Done" is defined in §6.
 ### 4.1 Capture & Extraction
 
 **Input:** a shared URL (and optionally a shared file or screen recording).
-**Output:** a `SavedItem` in status `done` with caption, transcript, frames, and extracted fields; or `needs_media` with a reason.
+**Output:** a `SavedItem` in status `done` with all applicable artifacts: caption, transcript, frames, and extracted fields; or `needs_media` with a reason.
 
 **Behavior:**
 1. Create a `SavedItem` with status `queued`; return the id immediately (do not block the client).
@@ -219,6 +223,8 @@ Instagram publishes no public content API. This branch is bounded to a single pu
 | `GraphVideo` | < 80 characters, transient path fails | `needs_media` with a user-visible reason and next step. |
 
 `always` forces the transient path for every `GraphVideo` (used for demos); `never` disables it entirely.
+
+Caption-only items are `done`; `transcript` is absent, and the UI must state that speech was not processed.
 
 **Transient path.** Download to `os.tmpdir()/magpie/{itemId}/`, never Supabase Storage, never a CDN, never a public URL. 200 MB cap, `content-type: video/*` validation, overall timeout. Extract audio with `ffmpeg -vn -ac 1 -ar 16000`. Extract frames with `select='gt(scene,0.3)'`, at most 5 frames, downscaled to 480 px wide JPEG q70 before OCR. Delete the whole temp directory in a `finally` block, on success and on failure. Sweep stale temp directories at startup.
 

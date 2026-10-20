@@ -76,7 +76,7 @@ These terms are a working draft. They describe how Magpie is intended to operate
 
 6.2 Magpie does not keep the original video, the extracted audio, or the raw page HTML.
 
-6.3 The thumbnail and frames are stored in a private bucket. Only the owner can read them, and they are deleted with the item.
+6.3 When media storage is enabled (Step 4), the thumbnail and frames will be stored in a private bucket. Only the owner can read them, and they are deleted with the item.
 
 6.4 You can delete an item at any time. Deletion removes the stored objects, the transcript, the frames, the extracted fields, and the embeddings.
 

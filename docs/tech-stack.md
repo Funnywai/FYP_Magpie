@@ -1,7 +1,7 @@
 # Magpie — Tech Stack
 
 A snapshot of what Magpie is actually built with, as of Step 1 (project skeleton).
-Versions reflect the installed, verified state.
+Versions reflect the installed, verified state unless marked planned.
 
 > For behaviour and data model, see [`SPEC.md`](./SPEC.md). This file describes the *tooling*.
 
@@ -23,7 +23,7 @@ Supabase (Postgres) database, with a single set of shared TypeScript types.
 | **Backend** | Node.js + TypeScript | Node `>= 22.13` / TS `~6.0.3` | Server runtime + language |
 | | Hono | `4.13.12` | REST API framework |
 | | @hono/node-server | `2.1.3` | Runs Hono on Node |
-| **Media processing** | ffmpeg | `7` | Audio extraction + scene-based frame sampling |
+| **Media processing** | ffmpeg | `7` (planned, not installed) | Audio extraction + scene-based frame sampling |
 | **Database** | PostgreSQL (Supabase) | PG `17` | Primary datastore |
 | | pgvector | built-in | Vector similarity search (semantic search) |
 | | Supabase RLS | — | Row-Level Security (per-user isolation) |
@@ -90,7 +90,7 @@ FYP_Magpie/
 │   └── shared/          # shared types + zod schemas (imported by both sides)
 ├── infra/
 │   └── supabase/        # database: migrations, RLS, pgTAP tests
-├── docs/                # SPEC, Proposal, Team, walkthrough
+├── docs/                # SPEC, Proposal, Team, legal, tech-stack
 └── .github/workflows/   # CI
 ```
 

@@ -362,7 +362,7 @@ Stores references to derived media produced during capture.
 | Field | Description |
 | --- | --- |
 | `item_id` | Foreign key to SavedItem |
-| `asset_type` | Asset type (thumbnail, audio, frame) |
+| `asset_type` | Asset type (thumbnail, user-provided audio, frame) |
 | `storage_path` | Object storage path |
 | `timestamp_seconds` | Timestamp within the source video (for frames) |
 | `ocr_text` | OCR text extracted from a frame (nullable) |
