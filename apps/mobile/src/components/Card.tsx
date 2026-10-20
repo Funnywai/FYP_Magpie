@@ -1,4 +1,4 @@
-import { Pressable, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, View, useWindowDimensions, type TextStyle } from 'react-native';
 
 import type { Item } from '../mocks/items';
 import { border, layout, radius } from '../theme/tokens';
@@ -12,6 +12,8 @@ import { Tag } from './Tag';
 import { TicketDivider } from './TicketDivider';
 import { Thumb } from './Thumb';
 import { Txt } from './Txt';
+
+const keepAll: TextStyle & { wordBreak?: 'keep-all' } = { wordBreak: 'keep-all' };
 
 type Props = {
   item: Item;
@@ -51,7 +53,16 @@ export function Card({ item, variant, onPress, onLongPress, tilt }: Props) {
   // Only the title is truncated (2 lines); status and failure text always wrap in full.
   const body = (
     <View style={{ flex: 1, padding: 12, gap: 6, justifyContent: 'center' }}>
-      <Txt type="heading" numberOfLines={2} lineBreakStrategyIOS="push-out" style={compactTitle ? { fontSize: 15, lineHeight: 22 } : undefined}>
+      <Txt
+        type="heading"
+        numberOfLines={2}
+        lineBreakStrategyIOS="push-out"
+        textBreakStrategy="balanced"
+        style={[
+          compactTitle ? { fontSize: 15, lineHeight: 22 } : null,
+          Platform.OS === 'web' ? keepAll : null,
+        ]}
+      >
         {item.title}
       </Txt>
       <Txt type="caption" color="textSecondary">

@@ -62,7 +62,7 @@ export function ShareScreen() {
       platform: platform ?? 'other',
       contentType: 'generic',
       status: 'queued',
-      transcriptStatus: 'skipped',
+      transcriptStatus: 'pending',
       meta: { zh: strings.zh.newMeta, en: strings.en.newMeta },
       url: url.trim(),
       art: 'sparkle',
@@ -80,7 +80,7 @@ export function ShareScreen() {
       setPhase('processing');
     });
     run(STEP_MS * 2, () => {
-      setStatus(id, 'done');
+      setStatus(id, 'done', 'skipped');
       setPhase('done');
     });
     run(STEP_MS * 3, () => {
