@@ -73,7 +73,7 @@ export function MapScreen() {
   // 0 = hidden, 1 = shown.
   const rise = useRef(new Animated.Value(0)).current;
   const selected = items.find((it) => it.id === selectedId);
-  // Only items that carry map coordinates get a pin; the mock data has none yet (ponytail: add `pin` to items when real places exist).
+  // Only items that carry map coordinates get a pin (three place mocks carry a pin).
   const pins = items.filter((it) => it.pin);
 
   // Card rises from the bottom (180ms); instant under Reduce Motion.

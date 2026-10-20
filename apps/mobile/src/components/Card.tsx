@@ -31,6 +31,8 @@ export function Card({ item, variant, onPress, onLongPress, tilt }: Props) {
   // Row cards shrink the thumbnail to 88px on <=360px phones.
   // Variant flag: row = list layout, stack = grid layout.
   const row = variant === 'row';
+  // Narrow row cards get a 15px title so CJK titles do not strand one character on line 2.
+  const compactTitle = row && width < 420;
   const thumbW = width <= layout.smallPhoneWidth ? layout.thumbRowSmall : layout.thumbRow;
   // Local reaction/save state echoed on the card so long-press actions are visible.
 
@@ -39,7 +41,7 @@ export function Card({ item, variant, onPress, onLongPress, tilt }: Props) {
     item.title,
     `${platformLabel[item.platform]} ${s.contentLabel[item.contentType]}`,
     s.statusLabel[item.status],
-    item.status === 'done' ? s.relevance(item.relevance) : '',
+    item.status === 'done' && item.relevance > 0 ? s.relevance(item.relevance) : '',
     item.failure ? `${loc(item.failure.reason)}, ${loc(item.failure.next)}` : '',
     item.fields.length ? s.lowestConf(s.confidence(Math.min(...item.fields.map((f) => f.confidence)))) : '',
   ]
@@ -49,7 +51,7 @@ export function Card({ item, variant, onPress, onLongPress, tilt }: Props) {
   // Only the title is truncated (2 lines); status and failure text always wrap in full.
   const body = (
     <View style={{ flex: 1, padding: 12, gap: 6, justifyContent: 'center' }}>
-      <Txt type="heading" numberOfLines={2}>
+      <Txt type="heading" numberOfLines={2} lineBreakStrategyIOS="push-out" style={compactTitle ? { fontSize: 15, lineHeight: 22 } : undefined}>
         {item.title}
       </Txt>
       <Txt type="caption" color="textSecondary">
@@ -64,7 +66,7 @@ export function Card({ item, variant, onPress, onLongPress, tilt }: Props) {
         </View>
       )}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-        {item.status === 'done' ? <Tag sparkle tilt={tilt}>{s.relevance(item.relevance)}</Tag> : <StatusPill status={item.status} />}
+        {item.status === 'done' && item.relevance > 0 ? <Tag sparkle tilt={tilt}>{s.relevance(item.relevance)}</Tag> : <StatusPill status={item.status} />}
       </View>
       {item.failure && (
         <Txt type="caption">

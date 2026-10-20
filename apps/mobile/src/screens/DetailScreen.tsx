@@ -127,6 +127,17 @@ export function DetailScreen() {
             ))}
           </Section>
         )}
+        {/* Done but empty (caption-only clip or a fresh save): say so instead of rendering nothing. */}
+        {!pending && item.status === 'done' && item.highlights.length === 0 && item.fields.length === 0 && (
+          <Txt type="body" color="textSecondary">
+            {s.noDetailsYet}
+          </Txt>
+        )}
+        {!pending && item.status === 'done' && item.transcript.length === 0 && (
+          <Txt type="body" color="textSecondary">
+            {s.speechNotProcessed}
+          </Txt>
+        )}
         {!pending && item.transcript.length > 0 && (
           // Collapsible; the expanded state is announced to screen readers.
           <Section title={s.transcript}>

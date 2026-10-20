@@ -70,6 +70,7 @@ export const mockItems: Item[] = [
       { at: '1:05', lang: 'zh', text: '座位非常有限，建議提前一星期預約。' },
     ],
     setting: 'indoor',
+    pin: { x: 57, y: 48 },
     saved: true,
   },
   {
@@ -148,6 +149,7 @@ export const mockItems: Item[] = [
       { at: '0:18', lang: 'yue', text: '豆腐花滑到入口即化，芝麻糊好香。' },
     ],
     setting: 'indoor',
+    pin: { x: 44, y: 36 },
     saved: false,
   },
   {
@@ -169,6 +171,25 @@ export const mockItems: Item[] = [
       reason: { zh: '原片無法下載，只取得貼文文字。', en: 'The video could not be downloaded; only the post text was captured.' },
       next: { zh: '請上傳螢幕錄影，我哋先可以辨識歌曲。', en: 'Upload a screen recording so we can identify the song.' },
     },
+    saved: false,
+  },
+  {
+    // Place / Threads / done but caption-only: speech was not processed, so the transcript is empty.
+    id: 'caption',
+    title: '中環隱世咖啡店',
+    platform: 'threads',
+    contentType: 'place',
+    status: 'done',
+    meta: { zh: '中環 · 3 日前', en: 'Central · 3 days ago' },
+    url: 'https://www.threads.net/@magpie/post/1',
+    art: 'dessert',
+    gradient: 2,
+    relevance: 71,
+    highlights: ['只靠貼文文字抽取', '手沖咖啡同自家烘焙豆'],
+    fields: [{ id: 'name', label: { zh: '店名', en: 'Name' }, value: '中環隱世咖啡店', confidence: 85, evidence: 'Caption · L1' }],
+    transcript: [],
+    setting: 'indoor',
+    pin: { x: 62, y: 74 },
     saved: false,
   },
   {
