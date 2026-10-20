@@ -15,6 +15,11 @@ export type SourcePlatform = 'instagram' | 'youtube' | 'threads' | 'other';
 export type ContentType = 'recipe' | 'place' | 'media' | 'generic';
 export type ItemStatus = 'queued' | 'processing' | 'done' | 'needs_media' | 'failed';
 
+export interface CaptureState {
+  completedSteps: string[];
+  failureReason: string | null;
+}
+
 /** SPEC §3.3 */
 export interface SavedItem {
   id: Uuid;
@@ -30,6 +35,7 @@ export interface SavedItem {
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;
   statusReason: string | null;
+  captureState: CaptureState | null;
 }
 
 /** SPEC §3.4 */
