@@ -83,15 +83,23 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | `highlights` | jsonb | generated key points |
 | `category` | text | assigned category |
 | `status` | text | queued \| processing \| done \| needs_media \| failed |
+| `status_reason` | text | nullable; user-visible reason for terminal non-done status (`needs_media`, `failed`); optional for `processing` |
+| `capture_state` | jsonb | completed capture steps + failure reason; enables resuming from the last completed step |
 
 ### 3.4 MediaAsset
 | Field | Type | Notes |
 | --- | --- | --- |
 | `item_id` | uuid FK → SavedItem | |
-| `asset_type` | text | thumbnail \| audio \| frame |
+| `asset_type` | text | thumbnail \| frame \| audio (user-provided only) |
 | `storage_path` | text | object storage path |
 | `timestamp_seconds` | numeric | nullable; for frames |
 | `ocr_text` | text | nullable |
+
+`frame` assets are downscaled stills (480 px wide, JPEG q70) retained as OCR evidence. When media storage is enabled (Step 4), they will be stored in a private bucket, owner-readable only, deleted with the item, never publicly addressable.
+
+`audio` assets are only for audio the user supplies. Audio extracted from platform media is transient and never stored.
+
+Bucket provisioning (private bucket + owner-read RLS) is planned for Step 4; until then no media is persisted.
 
 ### 3.5 TranscriptSegment
 | Field | Type | Notes |
@@ -176,7 +184,7 @@ Each feature below is a contract. "Done" is defined in §6.
 ### 4.1 Capture & Extraction
 
 **Input:** a shared URL (and optionally a shared file or screen recording).
-**Output:** a `SavedItem` in status `done` with caption, transcript, frames, and extracted fields; or `needs_media` with a reason.
+**Output:** a `SavedItem` in status `done` with all applicable artifacts: caption, transcript, frames, and extracted fields; or `needs_media` with a reason.
 
 **Behavior:**
 1. Create a `SavedItem` with status `queued`; return the id immediately (do not block the client).
@@ -188,12 +196,39 @@ Each feature below is a contract. "Done" is defined in §6.
 4. From usable media: extract audio and select frames (scene detection, capped count).
 5. Transcribe audio (Cantonese-aware) and OCR frames.
 6. Set status `processing → done`. Persist every intermediate artefact so retries resume from the last completed step.
-7. Delete the original media after `done`; keep only derived assets (thumbnails, transcript, frames).
+7. Delete the original media after `done`. Once media storage is enabled (Step 4), keep only derived assets (thumbnails, transcript, frames).
 
 **Edge cases:**
 - Unreachable/private/expired URL → `failed` with a readable reason.
 - Unsupported platform → capture what metadata is available; item proceeds as `generic` if text exists.
-- Never fail silently: every non-`done` status carries a user-visible reason and next step.
+- Never fail silently: every terminal non-`done` status (`needs_media`, `failed`) carries a user-visible reason and next step; `processing` may carry progress.
+
+#### 4.1.1 Instagram Reels (platform-specific)
+
+Instagram publishes no public content API. This branch is bounded to a single public URL the user explicitly shares.
+
+**URL normalization.** Accept `instagram.com/reel/{sc}`, `instagram.com/reels/{sc}`, and `instagram.com/p/{sc}`. Strip tracking parameters such as `rpxt` and `exln`. A URL with no shortcode returns `failed` with `unsupported_url`.
+
+**Embed fetch.** One logical embed fetch per explicitly shared URL: a single `GET https://www.instagram.com/reel/{shortcode}/embed/` plus at most 2 retries with backoff (3 requests total), 8 s timeout per attempt, no cookies, no proxy pool, no headless browser, no account or feed crawling.
+
+**Parsing.** The parser is a pure function: no network, no database. Read the caption at `edge_media_to_caption.edges[0].node.text`. Use three ordered sources: (1) a balanced-brace slice starting at the `"edge_media_to_caption"` key, parsed with `JSON.parse`; (2) the same slice unescaped exactly once, parsed again; (3) `og:description`, `"owner":{"username":...}`, and `"video_url"` as independent fallbacks. Never globally replace `\"` with `"`: captions containing quotes break. The balanced-brace scanner must respect string literals, escapes, and nested braces. Accept `video_url` only after `new URL()` validation. Use `data-media-type` to distinguish `GraphVideo` from `GraphImage`.
+
+**Media policy.** Controlled by `MAGPIE_IG_MEDIA_POLICY`, values `caption_first` (default), `always`, `never`.
+
+| Media type | Caption length | Action |
+| --- | --- | --- |
+| `GraphImage` | any | Caption only, no media download. |
+| `GraphVideo` | ≥ 80 characters | Caption only, no transcript; the UI must state that speech was not processed. |
+| `GraphVideo` | < 80 characters | Transient media path. |
+| `GraphVideo` | < 80 characters, transient path fails | `needs_media` with a user-visible reason and next step. |
+
+`always` forces the transient path for every `GraphVideo` (used for demos); `never` disables it entirely.
+
+Caption-only items are `done`; `transcript` is absent, and the UI must state that speech was not processed.
+
+**Transient path.** Download to `os.tmpdir()/magpie/{itemId}/`, never Supabase Storage, never a CDN, never a public URL. 200 MB cap, `content-type: video/*` validation, overall timeout. Extract audio with `ffmpeg -vn -ac 1 -ar 16000`. Extract frames with `select='gt(scene,0.3)'`, at most 5 frames, downscaled to 480 px wide JPEG q70 before OCR. Delete the whole temp directory in a `finally` block, on success and on failure. Sweep stale temp directories at startup.
+
+**No-persist rule.** Never persist the original video, the extracted audio, or the raw embed HTML. Keep only caption, author, transcript segments, extracted fields, embeddings, the re-hosted thumbnail, and OCR frames. Once media storage is enabled (Step 4), the thumbnail is a small private-bucket copy; never store the expiring Instagram CDN URL. There is no in-app playback of another party's media: show the thumbnail and link out to the source.
 
 ### 4.2 Representation & Semantic Labelling
 
@@ -276,6 +311,7 @@ REST under `/api`. All routes require auth unless noted. All responses are JSON 
 | `POST` | `/capture` | Submit a URL (+ optional file); returns `{ itemId, status }` |
 | `GET` | `/items` | List the user's items (filters, pagination) |
 | `GET` | `/items/:id` | Item detail incl. extracted fields + evidence |
+| `DELETE` | `/items/:id` | Delete an item and all derived data |
 | `PATCH` | `/items/:id/fields/:fieldId` | Correct an extracted field |
 | `POST` | `/items/:id/recapture` | Re-run extraction (optional hint) |
 | `GET` | `/search` | Query + filters → ranked items |
@@ -327,8 +363,9 @@ Build in this order; later items are optional until the earlier ones are solid.
 
 ## 8. Out of Scope
 
-- Server-side scraping of platforms that block access (capture relies on user-provided media).
-- Redistributing or re-hosting original videos.
+- Unbounded or bulk server-side scraping. Server-side fetching is permitted only through the bounded, per-request pipeline for a single public URL the user explicitly shared: one logical embed fetch (initial attempt plus bounded retries), no cookies, no proxy pool, no headless browser, no crawling of accounts, feeds, or other users' content.
+- Persistent storage or re-hosting of original media. Original video and audio may exist only as transient files outside the storage layer, deleted within the same request in a `finally` block — no public URL, no CDN, no in-app playback of another party's media.
+- Redistributing original videos or operating a mirror of any platform's content.
 - Music/streaming account integration (identification + search links only, if built).
 - Cross-platform price comparison / scraping e-commerce sites.
 - Multi-user social feeds beyond shared collections.
@@ -343,3 +380,5 @@ Build in this order; later items are optional until the earlier ones are solid.
 - **Reliability:** platform access may fail — `needs_media` is a first-class outcome, not an error.
 - **Cost:** cache model and external API responses; do not re-process unchanged items.
 - **Latency:** capture is async; the app must remain usable while processing.
+- **Bounded processing:** server-side fetching is limited to the bounded, per-request pipeline for a single public URL the user explicitly shared: one logical embed fetch (initial attempt plus bounded retries), no cookies, no proxy pool, no headless browser, no crawling, and transient media deleted within the same request.
+- **Terms and takedown:** user-submitted content is governed by the in-app terms (user warranty, transient-processing licence, rights defects borne by the user), and a monitored takedown channel deletes the item and all derived data — transcript, frames, extracted fields, embeddings — not only the media.
