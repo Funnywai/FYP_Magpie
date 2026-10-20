@@ -30,7 +30,7 @@ export interface SavedItem {
   title: string | null;
   caption: string | null;
   highlights: unknown[];
-  category: string;
+  labels: string[];
   status: ItemStatus;
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;

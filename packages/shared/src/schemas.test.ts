@@ -5,7 +5,7 @@ import { extractionResultSchema } from './schemas.js';
 describe('extractionResultSchema', () => {
   it('accepts a well-formed extraction result', () => {
     const result = extractionResultSchema.parse({
-      category: 'recipe',
+      contentType: 'recipe',
       labels: ['food', 'cantonese'],
       highlights: ['boil water', 'add noodles'],
       fields: [
@@ -19,13 +19,13 @@ describe('extractionResultSchema', () => {
       ],
     });
 
-    expect(result.category).toBe('recipe');
+    expect(result.contentType).toBe('recipe');
     expect(result.fields).toHaveLength(1);
   });
 
   it('rejects a confidence outside 0..1', () => {
     const invalid = {
-      category: 'recipe',
+      contentType: 'recipe',
       labels: [],
       highlights: [],
       fields: [
@@ -44,7 +44,7 @@ describe('extractionResultSchema', () => {
 
   it('allows a null fieldValue (meaning "not found")', () => {
     const result = extractionResultSchema.parse({
-      category: 'place',
+      contentType: 'place',
       labels: [],
       highlights: [],
       fields: [

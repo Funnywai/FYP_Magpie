@@ -66,7 +66,7 @@ This project serves both as a **practical engineering endeavour** — delivering
 
 ### 2.3 Automatic Categorisation and Key-Highlight Generation
 
-**Explanation:** Each item is automatically assigned a category and summarised into its key points (for example, a recipe's ingredients and steps, or a venue's address and opening hours). Users can review and correct these results directly.
+**Explanation:** Each item is automatically assigned a content type and semantic labels, then summarised into its key points (for example, a recipe's ingredients and steps, or a venue's address and opening hours). Users can review and correct these results directly.
 
 **Importance:** Automatic categorisation removes the manual filing burden that makes saved collections collapse at scale, while highlights let a user grasp an item's value at a glance without reopening the original content.
 
@@ -350,7 +350,7 @@ Represents a single captured piece of content.
 | `title` | Item title |
 | `caption` | Original caption text |
 | `highlights` | Generated key points (JSON) |
-| `category` | Assigned category |
+| `labels` | Semantic labels (topic, intent, location, entities) |
 | `status` | Processing status (queued, processing, done, needs_media, failed) |
 | `status_reason` | User-visible reason when status is `needs_media` or `failed` |
 | `capture_state` | Completed capture steps and failure reason (JSON), enables resume |
@@ -473,7 +473,7 @@ Represents a single stop within an itinerary day.
 
 | **API** | **Role in Project** | **Usage** |
 | --- | --- | --- |
-| **Google Gemini API** | Core multimodal understanding, structured extraction, and embeddings | Processes caption, audio, and frames; generates semantic labels, categories, highlights, and text embeddings; constrained to structured output for reliable extraction |
+| **Google Gemini API** | Core multimodal understanding, structured extraction, and embeddings | Processes caption, audio, and frames; generates semantic labels, content types, highlights, and text embeddings; constrained to structured output for reliable extraction |
 | **Speech-to-Text API (Deepgram)** | Cantonese and mixed-language speech recognition | Transcribes spoken content from video audio, with timestamped segments that support evidence linking |
 | **Google Maps Platform (Maps SDK, Places API)** | Core geospatial functionality: place resolution, details, and map rendering | Resolves extracted place names to coordinates and opening hours; displays saved places on the map and supplies data to the itinerary scheduler |
 | **Weather API (Hong Kong Observatory Open Data / Open-Meteo)** | Weather forecasting for the itinerary planner | Supplies forecasts used to reorder outdoor activities and trigger user notifications |

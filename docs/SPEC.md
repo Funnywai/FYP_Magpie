@@ -17,7 +17,7 @@ A mobile app that captures short-form social media content (Instagram Reels, You
 User shares a public URL to the app
   → system fetches caption + audio transcript + on-screen text (OCR)
   → fuses them into one item representation
-  → generates category + semantic labels + key highlights + embedding
+  → generates content_type + semantic labels + key highlights + embedding
   → stores item and indexes it
   → user finds it later via natural-language search, filters, or map
   → (optionally) turns saved places into a weather-aware itinerary
@@ -81,7 +81,7 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | `title` | text | nullable |
 | `caption` | text | nullable |
 | `highlights` | jsonb | generated key points |
-| `category` | text | assigned category |
+| `labels` | text[] | semantic labels (topic, intent, location, entities) |
 | `status` | text | queued \| processing \| done \| needs_media \| failed |
 | `status_reason` | text | nullable; user-visible reason for terminal non-done status (`needs_media`, `failed`); optional for `processing` |
 | `capture_state` | jsonb | completed capture steps + failure reason; enables resuming from the last completed step |
@@ -233,17 +233,18 @@ Caption-only items are `done`; `transcript` is absent, and the UI must state tha
 ### 4.2 Representation & Semantic Labelling
 
 **Input:** caption + transcript + OCR text.
-**Output:** `highlights`, `category`, semantic labels, and embedding chunks.
+**Output:** `highlights`, `content_type`, semantic labels, and embedding chunks.
 
 **Behavior:**
 1. Fuse the three text sources into one representation.
-2. Generate: category, semantic labels (topic, intent, location, entities), and key highlights.
-3. Produce embedding chunks: `structured_card` (title + category + key fields), `transcript` (per ~30–45s segment), `ocr` (merged).
+2. Generate: content_type, semantic labels (topic, intent, location, entities), and key highlights.
+3. Produce embedding chunks: `structured_card` (title + content_type + key fields), `transcript` (per ~30–45s segment), `ocr` (merged).
 4. Store embeddings in `EmbeddingChunk`.
 
 ### 4.3 Automatic Categorisation & Highlights
 
 - Assign exactly one `content_type` from: `recipe`, `place`, `media`, `generic`.
+- Store fine-grained labels in `labels` (e.g. `japanese_restaurant`, `pasta`); do not store a separate category.
 - Highlights are short key points (e.g. recipe ingredients/steps; venue address/hours).
 - All outputs are user-editable (see 4.6).
 
