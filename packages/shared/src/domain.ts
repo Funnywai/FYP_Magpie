@@ -38,7 +38,7 @@ export interface SavedItem {
   captureState: CaptureState | null;
 }
 
-/** SPEC §3.4 */
+/** SPEC §3.4 — `audio` is user-provided only; extracted platform audio is never persisted. */
 export type MediaAssetType = 'thumbnail' | 'audio' | 'frame';
 
 export interface MediaAsset {

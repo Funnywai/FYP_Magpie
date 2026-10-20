@@ -83,7 +83,7 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | `highlights` | jsonb | generated key points |
 | `category` | text | assigned category |
 | `status` | text | queued \| processing \| done \| needs_media \| failed |
-| `status_reason` | text | nullable; user-visible reason for non-done status |
+| `status_reason` | text | nullable; user-visible reason for terminal non-done status (`needs_media`, `failed`); optional for `processing` |
 | `capture_state` | jsonb | completed capture steps + failure reason; enables resuming from the last completed step |
 
 ### 3.4 MediaAsset
@@ -196,12 +196,12 @@ Each feature below is a contract. "Done" is defined in §6.
 4. From usable media: extract audio and select frames (scene detection, capped count).
 5. Transcribe audio (Cantonese-aware) and OCR frames.
 6. Set status `processing → done`. Persist every intermediate artefact so retries resume from the last completed step.
-7. Delete the original media after `done`; keep only derived assets (thumbnails, transcript, frames).
+7. Delete the original media after `done`. Once media storage is enabled (Step 4), keep only derived assets (thumbnails, transcript, frames).
 
 **Edge cases:**
 - Unreachable/private/expired URL → `failed` with a readable reason.
 - Unsupported platform → capture what metadata is available; item proceeds as `generic` if text exists.
-- Never fail silently: every non-`done` status carries a user-visible reason and next step.
+- Never fail silently: every terminal non-`done` status (`needs_media`, `failed`) carries a user-visible reason and next step; `processing` may carry progress.
 
 #### 4.1.1 Instagram Reels (platform-specific)
 
@@ -228,7 +228,7 @@ Caption-only items are `done`; `transcript` is absent, and the UI must state tha
 
 **Transient path.** Download to `os.tmpdir()/magpie/{itemId}/`, never Supabase Storage, never a CDN, never a public URL. 200 MB cap, `content-type: video/*` validation, overall timeout. Extract audio with `ffmpeg -vn -ac 1 -ar 16000`. Extract frames with `select='gt(scene,0.3)'`, at most 5 frames, downscaled to 480 px wide JPEG q70 before OCR. Delete the whole temp directory in a `finally` block, on success and on failure. Sweep stale temp directories at startup.
 
-**No-persist rule.** Never persist the original video, the extracted audio, or the raw embed HTML. Keep only caption, author, transcript segments, extracted fields, embeddings, the re-hosted thumbnail, and OCR frames. The thumbnail is a small private-bucket copy; never store the expiring Instagram CDN URL. There is no in-app playback of another party's media: show the thumbnail and link out to the source.
+**No-persist rule.** Never persist the original video, the extracted audio, or the raw embed HTML. Keep only caption, author, transcript segments, extracted fields, embeddings, the re-hosted thumbnail, and OCR frames. Once media storage is enabled (Step 4), the thumbnail is a small private-bucket copy; never store the expiring Instagram CDN URL. There is no in-app playback of another party's media: show the thumbnail and link out to the source.
 
 ### 4.2 Representation & Semantic Labelling
 

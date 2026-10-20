@@ -352,7 +352,7 @@ Represents a single captured piece of content.
 | `highlights` | Generated key points (JSON) |
 | `category` | Assigned category |
 | `status` | Processing status (queued, processing, done, needs_media, failed) |
-| `status_reason` | User-visible reason when status is not `done` |
+| `status_reason` | User-visible reason when status is `needs_media` or `failed` |
 | `capture_state` | Completed capture steps and failure reason (JSON), enables resume |
 
 ### 8.4 MediaAsset
