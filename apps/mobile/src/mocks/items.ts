@@ -1,5 +1,5 @@
 import type { Loc } from '../i18n/strings';
-import type { ContentType, IndoorOutdoor, ItemStatus, Language, SourcePlatform } from '@magpie/shared';
+import type { ContentType, IndoorOutdoor, ItemStatus, Language, SourcePlatform, TranscriptStatus } from '@magpie/shared';
 
 // Local UI types: the shared SavedItem needs ids/timestamps a mock does not have.
 export type Field = {
@@ -24,6 +24,7 @@ export type Item = {
   platform: SourcePlatform;
   contentType: ContentType;
   status: ItemStatus;
+  transcriptStatus: TranscriptStatus;
   meta: Loc;
   url: string;
   /** Hand-drawn SVG illustration shown on the thumbnail (see ThumbArt). */
@@ -51,6 +52,7 @@ export const mockItems: Item[] = [
     platform: 'instagram',
     contentType: 'place',
     status: 'done',
+    transcriptStatus: 'processed',
     meta: { zh: '尖沙咀 · 2 日前', en: 'Tsim Sha Tsui · 2 days ago' },
     url: 'https://www.instagram.com/reel/Cx9mQ2vP1aZ/',
     art: 'sushi',
@@ -80,6 +82,7 @@ export const mockItems: Item[] = [
     platform: 'youtube',
     contentType: 'recipe',
     status: 'done',
+    transcriptStatus: 'processed',
     meta: { zh: '食譜 · 3 日前', en: 'Recipe · 3 days ago' },
     url: 'https://www.youtube.com/shorts/aB3dE5fG7hI',
     art: 'pasta',
@@ -106,6 +109,7 @@ export const mockItems: Item[] = [
     platform: 'threads',
     contentType: 'place',
     status: 'done',
+    transcriptStatus: 'processed',
     meta: { zh: '大嶼山 · 戶外 · 5 日前', en: 'Lantau · Outdoor · 5 days ago' },
     url: 'https://www.threads.net/@hikehk/post/C8xYz12',
     art: 'hike',
@@ -133,6 +137,7 @@ export const mockItems: Item[] = [
     platform: 'instagram',
     contentType: 'place',
     status: 'done',
+    transcriptStatus: 'processed',
     meta: { zh: '深水埗 · 1 星期前', en: 'Sham Shui Po · 1 week ago' },
     url: 'https://www.instagram.com/reel/Dd4eF6gH8iJ/',
     art: 'dessert',
@@ -159,6 +164,7 @@ export const mockItems: Item[] = [
     platform: 'threads',
     contentType: 'media',
     status: 'needs_media',
+    transcriptStatus: 'pending',
     meta: { zh: '影視 · 銅鑼灣 · 1 星期前', en: 'Film & TV · Causeway Bay · 1 week ago' },
     url: 'https://www.threads.net/@filmhk/post/D1aB3c4',
     art: 'film',
@@ -180,6 +186,7 @@ export const mockItems: Item[] = [
     platform: 'threads',
     contentType: 'place',
     status: 'done',
+    transcriptStatus: 'skipped',
     meta: { zh: '中環 · 3 日前', en: 'Central · 3 days ago' },
     url: 'https://www.threads.net/@magpie/post/1',
     art: 'dessert',
@@ -199,6 +206,7 @@ export const mockItems: Item[] = [
     platform: 'youtube',
     contentType: 'recipe',
     status: 'processing',
+    transcriptStatus: 'pending',
     meta: { zh: '食譜 · 剛剛', en: 'Recipe · just now' },
     url: 'https://www.youtube.com/shorts/kL9mN0oP1qR',
     art: 'pot',
@@ -216,6 +224,7 @@ export const mockItems: Item[] = [
     platform: 'instagram',
     contentType: 'generic',
     status: 'failed',
+    transcriptStatus: 'pending',
     meta: { zh: '其他 · 2 星期前', en: 'Other · 2 weeks ago' },
     url: 'https://www.instagram.com/reel/removed/',
     art: 'link',
@@ -237,6 +246,7 @@ export const mockItems: Item[] = [
     platform: 'instagram',
     contentType: 'generic',
     status: 'queued',
+    transcriptStatus: 'pending',
     meta: { zh: '旺角 · 剛剛', en: 'Mong Kok · just now' },
     url: 'https://www.instagram.com/reel/Ee5fG7hI9jK/',
     art: 'shoe',

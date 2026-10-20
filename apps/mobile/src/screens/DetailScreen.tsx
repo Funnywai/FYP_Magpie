@@ -133,7 +133,7 @@ export function DetailScreen() {
             {s.noDetailsYet}
           </Txt>
         )}
-        {!pending && item.status === 'done' && item.transcript.length === 0 && (
+        {!pending && item.status === 'done' && item.transcriptStatus === 'skipped' && (
           <Txt type="body" color="textSecondary">
             {s.speechNotProcessed}
           </Txt>

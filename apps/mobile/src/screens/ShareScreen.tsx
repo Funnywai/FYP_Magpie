@@ -62,6 +62,7 @@ export function ShareScreen() {
       platform: platform ?? 'other',
       contentType: 'generic',
       status: 'queued',
+      transcriptStatus: 'skipped',
       meta: { zh: strings.zh.newMeta, en: strings.en.newMeta },
       url: url.trim(),
       art: 'sparkle',
