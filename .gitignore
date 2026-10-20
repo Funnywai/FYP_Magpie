@@ -2,6 +2,8 @@
 local/*
 AGENTS.md
 docs/superpowers/
+.opencode/*
+.playwright-mcp/*
 
 # Tooling artefacts
 .codegraph/

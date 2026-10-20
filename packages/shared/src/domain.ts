@@ -15,6 +15,11 @@ export type SourcePlatform = 'instagram' | 'youtube' | 'threads' | 'other';
 export type ContentType = 'recipe' | 'place' | 'media' | 'generic';
 export type ItemStatus = 'queued' | 'processing' | 'done' | 'needs_media' | 'failed';
 
+export interface CaptureState {
+  completedSteps: string[];
+  failureReason: string | null;
+}
+
 /** SPEC §3.3 */
 export interface SavedItem {
   id: Uuid;
@@ -29,9 +34,11 @@ export interface SavedItem {
   status: ItemStatus;
   createdAt: IsoTimestamp;
   updatedAt: IsoTimestamp;
+  statusReason: string | null;
+  captureState: CaptureState | null;
 }
 
-/** SPEC §3.4 */
+/** SPEC §3.4 — `audio` is user-provided only; extracted platform audio is never persisted. */
 export type MediaAssetType = 'thumbnail' | 'audio' | 'frame';
 
 export interface MediaAsset {

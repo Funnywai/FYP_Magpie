@@ -352,6 +352,8 @@ Represents a single captured piece of content.
 | `highlights` | Generated key points (JSON) |
 | `category` | Assigned category |
 | `status` | Processing status (queued, processing, done, needs_media, failed) |
+| `status_reason` | User-visible reason when status is `needs_media` or `failed` |
+| `capture_state` | Completed capture steps and failure reason (JSON), enables resume |
 
 ### 8.4 MediaAsset
 
@@ -360,7 +362,7 @@ Stores references to derived media produced during capture.
 | Field | Description |
 | --- | --- |
 | `item_id` | Foreign key to SavedItem |
-| `asset_type` | Asset type (thumbnail, audio, frame) |
+| `asset_type` | Asset type (thumbnail, user-provided audio, frame) |
 | `storage_path` | Object storage path |
 | `timestamp_seconds` | Timestamp within the source video (for frames) |
 | `ocr_text` | OCR text extracted from a frame (nullable) |
@@ -497,10 +499,10 @@ Represents a single stop within an itinerary day.
 
 **Mitigation:**
 
-- Adopt a multi-path capture strategy that prioritises media the user already has access to (shared file or screen recording) rather than server-side fetching
+- Adopt a multi-path capture strategy that prioritises user-provided media (shared file or screen recording); allow bounded server-side embed fetch only for a single explicitly shared URL
 - Treat caption and metadata extraction as a reliable fallback when full media is unavailable, and inform the user of the next step when a URL cannot be fully processed
 - Design provider abstraction around platform-specific handling so that changes in platform behaviour can be isolated and updated
-- Cache captured media and derived assets to avoid repeated fetching
+- Cache derived assets only; never persist the original video or extracted audio
 
 ### 10.2 Legal Risk and Platform Terms of Service
 
@@ -512,6 +514,8 @@ Represents a single stop within an itinerary day.
 - Store only the data functionally required, and avoid redistributing original videos
 - Delete original media after processing, retaining only derived data and thumbnails
 - Document data handling practices in accordance with university ethics guidelines
+- Restrict server-side fetching to a bounded transient path: one logical embed fetch (initial attempt plus bounded retries) per explicitly shared URL, transient media processing in OS temp storage, deletion within the same request, and no in-app playback or public URLs.
+- Publish terms that place the rights warranty on the user and operate a monitored takedown channel that removes derived data, not only the media.
 
 ### 10.3 AI Extraction Quality and Hallucination
 
