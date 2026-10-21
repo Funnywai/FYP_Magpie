@@ -1,33 +1,33 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-/**
- * App shell. Step 1 is structure only — no navigation, no auth, no data.
- * The item list / share intake flow arrives in later steps.
- */
-export function App() {
+import { LangProvider } from './i18n/LangProvider';
+import { RootNavigator } from './navigation/RootNavigator';
+import { ItemsProvider } from './state/ItemsProvider';
+import { ThemeProvider } from './theme/ThemeProvider';
+import { useTheme } from './theme/useTheme';
+
+function Shell() {
+  const { mode } = useTheme();
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Magpie</Text>
-      <Text style={styles.subtitle}>Skeleton ready.</Text>
-      <StatusBar style="auto" />
-    </View>
+    <>
+      <RootNavigator />
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+    </>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  subtitle: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
-});
+// Provider order: safe area -> theme (fonts) -> language -> data -> navigation.
+export function App() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <LangProvider>
+          <ItemsProvider>
+            <Shell />
+          </ItemsProvider>
+        </LangProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
+  );
+}

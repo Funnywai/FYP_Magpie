@@ -8,10 +8,14 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "hk.cuhk.magpie"
+      "bundleIdentifier": "hk.cuhk.magpie",
+      "requireFullScreen": true
     },
     "android": {
       "package": "hk.cuhk.magpie"
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
