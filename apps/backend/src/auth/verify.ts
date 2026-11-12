@@ -1,4 +1,6 @@
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { createRemoteJWKSet, customFetch, jwtVerify, type JWTVerifyGetKey } from 'jose';
+
+import { httpFetch } from '../http.js';
 
 export interface VerifiedToken {
   sub: string;
@@ -18,7 +20,12 @@ export interface VerifyConfig {
  * pass `createLocalJWKSet(...)` instead of reaching the network.
  */
 export function createVerifier(config: VerifyConfig, keyOverride?: JWTVerifyGetKey): Verifier {
-  const key = keyOverride ?? createRemoteJWKSet(config.jwksUrl);
+  const key =
+    keyOverride ??
+    createRemoteJWKSet(config.jwksUrl, {
+      timeoutDuration: 30_000,
+      [customFetch]: httpFetch,
+    });
 
   return async (token) => {
     const { payload } = await jwtVerify(token, key, {
