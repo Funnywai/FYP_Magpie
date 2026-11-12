@@ -13,6 +13,8 @@ export type TabParamList = {
 
 // Detail and Share sit above the tabs, so they live in the root stack.
 export type RootParamList = {
+  Login: undefined;
+  Signup: undefined;
   Main: NavigatorScreenParams<TabParamList> | undefined;
   Detail: { id: string };
   Share: undefined;

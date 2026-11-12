@@ -33,6 +33,7 @@ const zh = {
   found: (n: number) => `找到 ${n} 個相關項目`,
   foundA11y: (n: number) => `AI 找到 ${n} 個相關項目`,
   staleError: '更新失敗，以下係上次儲存嘅內容。',
+  itemsLoadError: '載入收藏失敗，請再試一次。',
   noMatchTitle: '搵唔到相符嘅項目',
   noMatchHint: '試下改關鍵字，或者清除篩選。',
   speechNotProcessed: '呢條短片冇處理語音，以下資料只來自文字說明同畫面。',
@@ -109,6 +110,7 @@ const zh = {
   newMeta: '其他 · 剛剛',
   // Settings and shared states
   settingsTitle: '設定',
+  settingsAccountTitle: '帳戶',
   appearance: '外觀',
   themeSystem: '系統',
   themeLight: '淺色',
@@ -124,6 +126,23 @@ const zh = {
   demoError: '錯誤',
   backToNormal: '返回正常狀態',
   serverError: '暫時連唔到伺服器，請稍後再試。',
+  // Auth
+  authSignInTitle: '登入 Magpie',
+  authSignUpTitle: '建立帳戶',
+  authEmail: '電子郵件',
+  authPassword: '密碼',
+  authSignIn: '登入',
+  authSignUp: '註冊',
+  authToSignUp: '未有帳戶？註冊',
+  authToSignIn: '已有帳戶？登入',
+  authInvalidCredentials: '電子郵件或密碼不正確。',
+  authMissingFields: '請輸入電子郵件同密碼。',
+  authPasswordTooShort: '密碼至少需要 8 個字元。',
+  authGenericError: '發生錯誤，請再試一次。',
+  authCheckEmail: '請檢查電子郵件以確認帳戶。',
+  authEmailNotConfirmed: '請先確認你的電子郵件，再登入。',
+  signOut: '登出',
+  signedInAs: (email: string) => `已登入：${email}`,
 };
 
 export type Strings = typeof zh;
@@ -157,6 +176,7 @@ const en: Strings = {
   found: (n) => `Found ${n} related ${n === 1 ? 'item' : 'items'}`,
   foundA11y: (n) => `AI found ${n} related ${n === 1 ? 'item' : 'items'}`,
   staleError: 'Update failed. Showing what was saved last time.',
+  itemsLoadError: 'Could not load your saved items. Try again.',
   noMatchTitle: 'No matches',
   noMatchHint: 'Try different words or clear the filter.',
   speechNotProcessed: 'Speech was not processed for this clip. Details come from the caption and on-screen text only.',
@@ -233,6 +253,7 @@ const en: Strings = {
   newMeta: 'Other · just now',
   // Settings and shared states
   settingsTitle: 'Settings',
+  settingsAccountTitle: 'Account',
   appearance: 'Appearance',
   themeSystem: 'System',
   themeLight: 'Light',
@@ -248,6 +269,23 @@ const en: Strings = {
   demoError: 'Error',
   backToNormal: 'Back to normal',
   serverError: 'Cannot reach the server right now. Please try again later.',
+  // Auth
+  authSignInTitle: 'Sign in to Magpie',
+  authSignUpTitle: 'Create an account',
+  authEmail: 'Email',
+  authPassword: 'Password',
+  authSignIn: 'Sign in',
+  authSignUp: 'Sign up',
+  authToSignUp: 'No account? Sign up',
+  authToSignIn: 'Already have an account? Sign in',
+  authInvalidCredentials: 'Email or password is incorrect.',
+  authMissingFields: 'Enter both email and password.',
+  authPasswordTooShort: 'Password must be at least 8 characters.',
+  authGenericError: 'Something went wrong. Try again.',
+  authCheckEmail: 'Check your email to confirm your account.',
+  authEmailNotConfirmed: 'Confirm your email before signing in.',
+  signOut: 'Sign out',
+  signedInAs: (email: string) => `Signed in as ${email}`,
 };
 
 export const strings: Record<Lang, Strings> = { en, zh };

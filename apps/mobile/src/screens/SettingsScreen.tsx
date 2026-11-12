@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { useAuth } from '../auth/AuthProvider';
+import { Button } from '../components/Button';
 import { Screen } from '../components/Screen';
 import { Segmented } from '../components/Segmented';
 import { Txt } from '../components/Txt';
@@ -37,6 +39,8 @@ export function SettingsScreen() {
   const { preference, setPreference } = useTheme();
   const { lang, setLang, s } = useLang();
   const { demo, setDemo } = useItems();
+  const { signOut, session } = useAuth();
+  const [signOutError, setSignOutError] = useState(false);
   // Review aid, not a product feature: forces every screen into a given state.
   const demoStates = [
     { value: 'ready', label: s.demoReady },
@@ -95,6 +99,22 @@ export function SettingsScreen() {
           <Txt type="caption" color="textSecondary">
             {s.demoHint}
           </Txt>
+        </Row>
+        <Row title={s.settingsAccountTitle}>
+          <Txt type="body">{s.signedInAs(session?.user.email ?? '')}</Txt>
+          <Button
+            label={s.signOut}
+            variant="secondary"
+            onPress={() => {
+              setSignOutError(false);
+              void signOut().catch(() => setSignOutError(true));
+            }}
+          />
+          {signOutError && (
+            <Txt type="body" color="dangerText" accessibilityRole="alert">
+              {s.authGenericError}
+            </Txt>
+          )}
         </Row>
       </ScrollView>
     </Screen>
