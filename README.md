@@ -6,7 +6,7 @@ A mobile app that captures short-form social media content and makes it searchab
 
 ## Status
 
-**Foundation + mobile shell.** Monorepo structure, local Supabase schema (12 tables + RLS), pgTAP tests, CI, and shared types are in place. The Expo UI shell is merged and currently runs on mock data. The backend is still a skeleton: authentication and the capture pipeline are the next milestones (Phase 3, Nov–Dec 2026).
+**Foundation + backend auth.** Monorepo structure, local Supabase schema (12 tables + RLS), pgTAP tests, CI, and shared types are in place. The Expo UI shell is merged and currently runs on mock data. The backend now verifies Supabase JWTs and serves a protected `GET /api/items`; mobile auth screens and the capture pipeline are the next milestones (Phase 3, Nov–Dec 2026).
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ pnpm db:reset      # apply migrations + seed
 
 ```
 apps/mobile     Expo app shell
-apps/backend    Hono API (skeleton; auth + capture next)
+apps/backend    Hono API (JWT auth + protected items; capture next)
 packages/shared Shared types + zod schemas
 infra/supabase  DB config, migrations, seed, pgTAP tests
 ```

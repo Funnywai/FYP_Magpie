@@ -41,7 +41,7 @@
 | Phase | Tam Yuk Hei (A) | Xu Ka Wai (B) |
 |---|---|---|
 | **1. Planning (Sep)** | Requirements, UX sketches, feature list | System architecture, data model, technical validation |
-| **2. Foundation (Oct) — completed** | App shell, share intake, saved-list UI (mock data) | Monorepo, CI, DB schema + RLS, shared types. Capture pipeline deferred to Phase 3. |
+| **2. Foundation (Oct) — foundation completed; capture deferred** | App shell, share intake, saved-list UI (mock data) | Monorepo, CI, DB schema + RLS, shared types. Capture pipeline deferred to Phase 3. |
 | **3. Capture + Retrieval (Nov–Dec)** | Search UI, filters, item-detail integration; capture UI states | Auth E2E; capture pipeline (caption/ASR/OCR) for one platform; representation, categorisation, highlights, embeddings, vector index, search API |
 | **4. Features (Jan–Feb)** | Map, collections UI, itinerary UI, correction UI | Personalised ranking, itinerary algorithm, weather integration, collections API |
 | **5. Testing (Mar)** | UI polish, running user testing | Performance optimisation, integration testing, bug fixes |
