@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthProvider } from './auth/AuthProvider';
 import { LangProvider } from './i18n/LangProvider';
 import { RootNavigator } from './navigation/RootNavigator';
 import { ItemsProvider } from './state/ItemsProvider';
@@ -22,11 +23,13 @@ export function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <LangProvider>
+      <LangProvider>
+        <AuthProvider>
           <ItemsProvider>
             <Shell />
           </ItemsProvider>
-        </LangProvider>
+        </AuthProvider>
+      </LangProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
