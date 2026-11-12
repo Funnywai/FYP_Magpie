@@ -21,7 +21,7 @@ import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import type { Item } from '../mocks/items';
 import type { RootNav } from '../navigation/types';
 import { useItems } from '../state/ItemsProvider';
-import { border, layout, radius } from '../theme/tokens';
+import { border, radius } from '../theme/tokens';
 import { useLayout } from '../theme/useLayout';
 import { useTheme } from '../theme/useTheme';
 
@@ -182,12 +182,7 @@ export function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.accentText} colors={[colors.accentText]} />}
         columnWrapperStyle={L.cols > 1 ? { gap: 12 } : undefined}
-        contentContainerStyle={{
-          paddingTop: L.padTop + 12,
-          paddingBottom: (L.sidebar ? L.padBottom : L.insets.bottom + layout.tabBarHeight) + 24 + kb,
-          paddingLeft: L.padLeft,
-          paddingRight: L.padRight,
-        }}
+        contentContainerStyle={{ paddingTop: L.padTop + 12, paddingBottom: L.padBottom + 24 + kb, paddingLeft: L.padLeft, paddingRight: L.padRight }}
         // null = padding cell so the final row keeps column widths.
         renderItem={({ item, index }) =>
           item ? (
