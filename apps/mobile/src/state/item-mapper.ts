@@ -18,7 +18,10 @@ export function toUiItem(saved: SavedItem): Item {
     contentType: saved.contentType,
     status: saved.status,
     transcriptStatus: saved.transcriptStatus,
-    meta: { zh: strings.zh.itemMetaSaved, en: strings.en.itemMetaSaved },
+    meta: {
+      zh: strings.zh.contentLabel[saved.contentType],
+      en: strings.en.contentLabel[saved.contentType],
+    },
     url: saved.sourceUrl,
     art: 'link',
     gradient: 0,
@@ -26,6 +29,6 @@ export function toUiItem(saved: SavedItem): Item {
     highlights,
     fields: [],
     transcript: [],
-    saved: false,
+    saved: true,
   };
 }

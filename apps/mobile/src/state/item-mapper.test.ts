@@ -31,11 +31,11 @@ describe('toUiItem', () => {
       status: 'done',
       transcriptStatus: 'processed',
       url: saved.sourceUrl,
-      meta: { zh: '已儲存', en: 'Saved' },
+      meta: { zh: '地點', en: 'Place' },
       highlights: ['尖沙咀'],
       fields: [],
       transcript: [],
-      saved: false,
+      saved: true,
     });
   });
 
