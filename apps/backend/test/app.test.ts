@@ -12,10 +12,15 @@ describe('GET /api/health', () => {
 });
 
 describe('GET /api/items', () => {
-  it('returns an empty list (stub — auth is Step 2)', async () => {
+  it('returns 401 without a Bearer token (auth is enforced)', async () => {
     const res = await app.request('/api/items');
 
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ items: [], nextCursor: null });
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({
+      error: {
+        code: 'UNAUTHENTICATED',
+        message: 'Missing or malformed Authorization header',
+      },
+    });
   });
 });
