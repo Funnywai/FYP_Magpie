@@ -36,6 +36,17 @@ describe('createHttpClient', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
+  it('redacts query strings from logs', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(response(200));
+    const client = createHttpClient({ fetchImpl, baseDelayMs: 0 });
+
+    await client('https://example.test/resource?api_key=secret');
+
+    const logged = vi.mocked(console.info).mock.calls.flat().join(' ');
+    expect(logged).toContain('https://example.test/resource');
+    expect(logged).not.toContain('api_key=secret');
+  });
+
   it('does not retry a 401', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(response(401));
     const client = createHttpClient({ fetchImpl, baseDelayMs: 0 });

@@ -43,6 +43,7 @@ export function createHttpClient(options: HttpClientOptions = {}): Fetch {
   return async (input, init) => {
     const method = requestMethod(input, init);
     const url = requestUrl(input);
+    const logUrl = url.split('?')[0] ?? url;
     const attempts = IDEMPOTENT_METHODS.has(method) ? retries + 1 : 1;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -56,7 +57,7 @@ export function createHttpClient(options: HttpClientOptions = {}): Fetch {
       try {
         const response = await fetchImpl(input, { ...init, signal: controller.signal });
         console.info(
-          `[http] ${method} ${url} -> ${response.status} (${Date.now() - startedAt}ms, attempt ${attempt}/${attempts})`,
+          `[http] ${method} ${logUrl} -> ${response.status} (${Date.now() - startedAt}ms, attempt ${attempt}/${attempts})`,
         );
 
         if (attempt < attempts && RETRYABLE_STATUS.has(response.status)) {
@@ -68,7 +69,7 @@ export function createHttpClient(options: HttpClientOptions = {}): Fetch {
         return response;
       } catch (error) {
         console.warn(
-          `[http] ${method} ${url} failed after ${Date.now() - startedAt}ms (attempt ${attempt}/${attempts}): ${
+          `[http] ${method} ${logUrl} failed after ${Date.now() - startedAt}ms (attempt ${attempt}/${attempts}): ${
             error instanceof Error ? error.message : 'unknown error'
           }`,
         );
