@@ -51,9 +51,9 @@ Supabase (Postgres) database, with a single set of shared TypeScript types.
 ## Current state (12 Nov 2026)
 
 - Foundation: monorepo, CI, shared types, 12-table Supabase schema + RLS, pgTAP tests.
-- Mobile: Expo UI shell merged; screens run on mock data.
+- Mobile: Expo UI shell + email/password auth; Home reads the real saved-item API; remaining screens still use mock data.
 - Backend: `GET /api/health` and a protected `GET /api/items` (JWKS auth + RLS); no AI calls yet.
-- Next: mobile auth E2E and the capture pipeline (Phase 3, Nov–Dec 2026).
+- Next: capture pipeline (Phase 3, Nov–Dec 2026).
 
 ## Planned but NOT yet integrated
 
@@ -68,7 +68,7 @@ The following are specified in `SPEC.md` but **not wired up yet** (Phase 3 onwar
 | Media ID (optional) | TMDB / AniList / trace.moe | 12 |
 | Monitoring (optional) | Sentry, PostHog | later |
 
-> The backend currently makes **no AI calls** — only `GET /api/health` and the protected `GET /api/items`. Mobile auth, capture and AI land in Phase 3.
+> The backend currently makes **no AI calls** — only `GET /api/health` and the protected `GET /api/items`. Capture and AI land in Phase 3.
 
 ---
 
@@ -142,4 +142,4 @@ Common commands:
 > Magpie is a pnpm monorepo: mobile is React Native (Expo 57), backend is Hono on Node 22,
 > database is Supabase Postgres 17 + pgvector, all TypeScript strict with shared types in
 > `packages/shared`. The skeleton, database (12 tables + RLS + CI) and mobile UI shell are
-> done; backend auth is in place; mobile auth, capture and AI (Gemini/Deepgram) land in Phase 3 (Nov–Dec 2026).
+> done; backend and mobile auth are in place; capture and AI (Gemini/Deepgram) land in Phase 3 (Nov–Dec 2026).

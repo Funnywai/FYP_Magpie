@@ -203,6 +203,8 @@ The following timeline assumes a **one-year academic project** (September to Apr
 | **Phase 6: Evaluation and Report** | Month 7 (Apr 2027) | Analysis of user study data. Final report writing. Presentation preparation. | Final FYP report, presentation slides, project demonstration |
 
 > **Timeline revision (31 Oct 2026).** The Phase 2 capture pipeline prototype was not completed by the end of October and is carried into Phase 3. Phase 3 now spans November–December 2026: auth, capture and item APIs in November; representation, embeddings and semantic search in December. Phase 4–6 milestones and the final submission date are unchanged. The table above records the original plan for reference.
+>
+> **Status (12 Nov 2026).** Auth E2E is complete (backend + mobile). Capture and item APIs remain for November; representation, embeddings and semantic search for December.
 
 ---
 

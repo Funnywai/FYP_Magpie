@@ -37,12 +37,14 @@
 ## 3. Responsibilities by Phase (Sep 2026 – Apr 2027)
 
 > **Revised 31 Oct 2026.** The Phase 2 capture prototype was not completed by the end of October and is carried into Phase 3. Phase 3 now spans November–December 2026; Phase 4–6 dates are unchanged.
+>
+> **Status 12 Nov 2026.** Auth E2E is complete (backend + mobile). Phase 3 continues with the capture pipeline and retrieval.
 
 | Phase | Tam Yuk Hei (A) | Xu Ka Wai (B) |
 |---|---|---|
 | **1. Planning (Sep)** | Requirements, UX sketches, feature list | System architecture, data model, technical validation |
 | **2. Foundation (Oct) — foundation completed; capture deferred** | App shell, share intake, saved-list UI (mock data) | Monorepo, CI, DB schema + RLS, shared types. Capture pipeline deferred to Phase 3. |
-| **3. Capture + Retrieval (Nov–Dec)** | Search UI, filters, item-detail integration; capture UI states | Auth E2E; capture pipeline (caption/ASR/OCR) for one platform; representation, categorisation, highlights, embeddings, vector index, search API |
+| **3. Capture + Retrieval (Nov–Dec)** | Search UI, filters, item-detail integration; capture UI states | Auth E2E — completed; capture pipeline (caption/ASR/OCR) for one platform; representation, categorisation, highlights, embeddings, vector index, search API |
 | **4. Features (Jan–Feb)** | Map, collections UI, itinerary UI, correction UI | Personalised ranking, itinerary algorithm, weather integration, collections API |
 | **5. Testing (Mar)** | UI polish, running user testing | Performance optimisation, integration testing, bug fixes |
 | **6. Report (Apr)** | Demo app, poster | Data analysis, experimental results, technical report chapters |
