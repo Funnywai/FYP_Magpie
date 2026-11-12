@@ -1,6 +1,7 @@
 import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import type { ApiError, ApiErrorCode, ListItemsResponse } from '@magpie/shared';
 
+import { httpFetch } from './http';
 import { supabase } from './supabase';
 
 const ERROR_CODES: readonly ApiErrorCode[] = [
@@ -66,7 +67,7 @@ async function bearer(expectedUserId: string): Promise<string> {
 }
 
 async function raw(path: string, init: RequestInit, expectedUserId: string): Promise<Response> {
-  return fetch(`${BASE}${path}`, {
+  return httpFetch(`${BASE}${path}`, {
     ...init,
     headers: {
       ...init.headers,

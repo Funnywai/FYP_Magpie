@@ -33,6 +33,8 @@ function session(value: typeof SESSION_A | typeof SESSION_B | null) {
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
+  vi.spyOn(console, 'info').mockImplementation(() => {});
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
   getSession.mockResolvedValue(session(SESSION_A));
   refreshSession.mockResolvedValue({ data: { session: SESSION_A2 }, error: null });
   signOut.mockResolvedValue({ error: null });
@@ -40,6 +42,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
@@ -125,16 +128,17 @@ describe('apiFetch', () => {
   });
 
   it('surfaces a network failure as NETWORK', async () => {
-    vi.mocked(fetch).mockRejectedValueOnce(new TypeError('Network request failed'));
+    vi.mocked(fetch).mockRejectedValue(new TypeError('Network request failed'));
 
     await expect(apiFetch('/api/items')).rejects.toMatchObject({ code: 'NETWORK' });
+    expect(fetch).toHaveBeenCalledTimes(3);
     expect(signOut).not.toHaveBeenCalled();
   });
 
   it('maps an unknown error body to INTERNAL', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
-      status: 500,
+      status: 400,
       json: async () => ({}),
     } as Response);
 
