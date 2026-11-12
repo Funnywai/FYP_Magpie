@@ -1,6 +1,6 @@
 # Magpie — Tech Stack
 
-A snapshot of what Magpie is actually built with, as of Step 1 (project skeleton).
+A snapshot of what Magpie is actually built with, as of 12 November 2026 (mid-term).
 Versions reflect the installed, verified state unless marked planned.
 
 > For behaviour and data model, see [`SPEC.md`](./SPEC.md). This file describes the *tooling*.
@@ -23,7 +23,7 @@ Supabase (Postgres) database, with a single set of shared TypeScript types.
 | **Backend** | Node.js + TypeScript | Node `>= 22.13` / TS `~6.0.3` | Server runtime + language |
 | | Hono | `4.13.12` | REST API framework |
 | | @hono/node-server | `2.1.3` | Runs Hono on Node |
-| **Media processing** | ffmpeg | `7` (required for Phase 1, not installed) | Audio extraction + scene-based frame sampling |
+| **Media processing** | ffmpeg | `7` (required for Phase 3 capture, not installed) | Audio extraction + scene-based frame sampling |
 | **Database** | PostgreSQL (Supabase) | PG `17` | Primary datastore |
 | | pgvector | built-in | Vector similarity search (semantic search) |
 | | Supabase RLS | — | Row-Level Security (per-user isolation) |
@@ -48,9 +48,16 @@ Supabase (Postgres) database, with a single set of shared TypeScript types.
 
 ---
 
+## Current state (12 Nov 2026)
+
+- Foundation: monorepo, CI, shared types, 12-table Supabase schema + RLS, pgTAP tests.
+- Mobile: Expo UI shell merged; screens run on mock data.
+- Backend: `GET /api/health` and a protected `GET /api/items` (JWKS auth + RLS); no AI calls yet.
+- Next: mobile auth E2E and the capture pipeline (Phase 3, Nov–Dec 2026).
+
 ## Planned but NOT yet integrated
 
-Step 1 is structure only. The following are specified in `SPEC.md` but **not wired up yet**:
+The following are specified in `SPEC.md` but **not wired up yet** (Phase 3 onward):
 
 | Category | Technology | Step |
 | --- | --- | --- |
@@ -61,7 +68,7 @@ Step 1 is structure only. The following are specified in `SPEC.md` but **not wir
 | Media ID (optional) | TMDB / AniList / trace.moe | 12 |
 | Monitoring (optional) | Sentry, PostHog | later |
 
-> The backend currently makes **no AI calls** — only `GET /api/health` and a stub `GET /api/items`.
+> The backend currently makes **no AI calls** — only `GET /api/health` and the protected `GET /api/items`. Mobile auth, capture and AI land in Phase 3.
 
 ---
 
@@ -134,5 +141,5 @@ Common commands:
 
 > Magpie is a pnpm monorepo: mobile is React Native (Expo 57), backend is Hono on Node 22,
 > database is Supabase Postgres 17 + pgvector, all TypeScript strict with shared types in
-> `packages/shared`. The skeleton and database (12 tables + RLS + CI) are done; AI
-> (Gemini/Deepgram) and features come in later steps.
+> `packages/shared`. The skeleton, database (12 tables + RLS + CI) and mobile UI shell are
+> done; backend auth is in place; mobile auth, capture and AI (Gemini/Deepgram) land in Phase 3 (Nov–Dec 2026).

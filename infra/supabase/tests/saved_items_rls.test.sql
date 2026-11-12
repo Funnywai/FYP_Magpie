@@ -9,17 +9,12 @@
 begin;
 select plan(4);
 
--- Two users. Inserting directly into auth.users simulates sign-up.
+-- Two users. Inserting directly into auth.users simulates sign-up;
+-- the trigger provisions the matching public.users profile rows.
 insert into auth.users (id, email)
 values
   ('11111111-1111-1111-1111-111111111111', 'owner@example.com'),
   ('22222222-2222-2222-2222-222222222222', 'other@example.com');
-
--- Profile rows are required because saved_items.user_id references public.users.
-insert into public.users (id, email, display_name, auth_provider)
-values
-  ('11111111-1111-1111-1111-111111111111', 'owner@example.com', 'Owner', 'email'),
-  ('22222222-2222-2222-2222-222222222222', 'other@example.com', 'Other', 'email');
 
 -- --- As the owner: create one item ----------------------------------------
 set local role authenticated;

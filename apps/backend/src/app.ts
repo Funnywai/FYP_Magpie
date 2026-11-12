@@ -1,15 +1,19 @@
 import type { HealthResponse } from '@magpie/shared';
 import { Hono } from 'hono';
 
+import { apiError } from './errors.js';
 import { itemsRoutes } from './routes/items.js';
 
-/**
- * Backend skeleton (docs/SPEC.md §5).
- *
- * Step 1: routing and type wiring only. No authentication, no AI providers.
- * Auth enforcement is Step 2.
- */
-export const app = new Hono();
+export function registerErrorHandlers(app: Hono) {
+  app.notFound((c) => c.json(apiError('NOT_FOUND', 'Route not found'), 404));
+  app.onError((error, c) => {
+    console.error('[app] unhandled error:', error instanceof Error ? error.message : error);
+    return c.json(apiError('INTERNAL', 'Something went wrong'), 500);
+  });
+  return app;
+}
+
+export const app = registerErrorHandlers(new Hono());
 
 app.get('/api/health', (c) => {
   const body: HealthResponse = { status: 'ok' };

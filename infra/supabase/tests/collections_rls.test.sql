@@ -9,11 +9,6 @@ values
   ('11111111-1111-1111-1111-111111111111', 'owner@example.com'),
   ('22222222-2222-2222-2222-222222222222', 'other@example.com');
 
-insert into public.users (id, email, display_name, auth_provider)
-values
-  ('11111111-1111-1111-1111-111111111111', 'owner@example.com', 'Owner', 'email'),
-  ('22222222-2222-2222-2222-222222222222', 'other@example.com', 'Other', 'email');
-
 -- --- Owner creates a private and a shared collection ---------------------
 set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';

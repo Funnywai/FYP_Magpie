@@ -17,10 +17,17 @@ import type {
   Uuid,
 } from './domain.js';
 
+export type ApiErrorCode =
+  | 'UNAUTHENTICATED'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'VALIDATION_FAILED'
+  | 'INTERNAL';
+
 /** Shared error envelope (SPEC §5). */
 export interface ApiError {
   error: {
-    code: string;
+    code: ApiErrorCode;
     message: string;
   };
 }
