@@ -1,6 +1,7 @@
+import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
 
-import { app } from '../src/app.js';
+import { app, registerErrorHandlers } from '../src/app.js';
 
 describe('GET /api/health', () => {
   it('returns 200 with { status: "ok" }', async () => {
@@ -21,6 +22,33 @@ describe('GET /api/items', () => {
         code: 'UNAUTHENTICATED',
         message: 'Missing or malformed Authorization header',
       },
+    });
+  });
+});
+
+describe('unknown routes', () => {
+  it('returns the error envelope instead of plain text', async () => {
+    const res = await app.request('/api/nope');
+
+    expect(res.status).toBe(404);
+    await expect(res.json()).resolves.toEqual({
+      error: { code: 'NOT_FOUND', message: 'Route not found' },
+    });
+  });
+});
+
+describe('unhandled errors', () => {
+  it('returns the error envelope instead of Hono default text', async () => {
+    const testApp = registerErrorHandlers(new Hono());
+    testApp.get('/boom', () => {
+      throw new Error('boom');
+    });
+
+    const res = await testApp.request('/boom');
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({
+      error: { code: 'INTERNAL', message: 'Something went wrong' },
     });
   });
 });
