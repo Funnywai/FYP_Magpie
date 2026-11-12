@@ -62,7 +62,7 @@ export function HomeScreen() {
     { key: 'media', label: s.filterMedia, icon: 'film' },
     { key: 'processing', label: s.filterProcessing, icon: 'clock' },
   ] as const satisfies readonly { key: FilterKey; label: string; icon?: IconName }[];
-  const { items, demo, setDemo, react, toggleSave } = useItems();
+  const { items, demo, setDemo, react, toggleSave, loading: itemsLoading, error, reload } = useItems();
   // Layout numbers: columns, gutters and safe-area padding for this breakpoint.
   const L = useLayout();
   // Keyboard height is added to the list padding so the last rows stay reachable.
@@ -75,14 +75,15 @@ export function HomeScreen() {
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  // Pull to refresh: show skeletons for 1s, then restore (no network involved).
+  // Pull to refresh: show skeletons for at least 1s while the real list reloads.
   const refresh = () => {
     setRefreshing(true);
+    void reload();
     timer.current = setTimeout(() => setRefreshing(false), 1000);
   };
 
-  // Skeleton shows for pull-to-refresh or the Settings preview.
-  const loading = refreshing || demo === 'loading';
+  // Skeleton shows for pull-to-refresh, the Settings preview, or a live fetch.
+  const loading = refreshing || demo === 'loading' || itemsLoading;
   // Empty preview shows no rows regardless of the filter/query.
   const shown = demo === 'empty' ? [] : items.filter((it) => matches(it, filter) && matchesQuery(it, query));
   const noMatch = demo !== 'empty' && items.length > 0;
@@ -135,7 +136,15 @@ export function HomeScreen() {
         <Tag sparkle>AI</Tag>
         <Txt type="body">{s.found(shown.length)}</Txt>
       </View>
-      {demo === 'error' && <ErrorBanner message={s.staleError} onRetry={() => setDemo('ready')} />}
+      {(demo === 'error' || error) && (
+        <ErrorBanner
+          message={items.length === 0 ? s.itemsLoadError : s.staleError}
+          onRetry={() => {
+            setDemo('ready');
+            reload();
+          }}
+        />
+      )}
     </View>
   );
 
