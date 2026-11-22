@@ -24,6 +24,7 @@ import { useItems } from '../state/ItemsProvider';
 import { border, radius } from '../theme/tokens';
 import { useLayout } from '../theme/useLayout';
 import { useTheme } from '../theme/useTheme';
+import { homeListMode, showsItemCount } from './home-list';
 
 type FilterKey = 'all' | 'recipe' | 'place' | 'media' | 'processing';
 
@@ -62,7 +63,7 @@ export function HomeScreen() {
     { key: 'media', label: s.filterMedia, icon: 'film' },
     { key: 'processing', label: s.filterProcessing, icon: 'clock' },
   ] as const satisfies readonly { key: FilterKey; label: string; icon?: IconName }[];
-  const { items, demo, setDemo, react, toggleSave, loading: itemsLoading, error, reload } = useItems();
+  const { items, demo, setDemo, react, toggleSave, loading: itemsLoading, error, hasLoaded, hasMore, reload } = useItems();
   // Layout numbers: columns, gutters and safe-area padding for this breakpoint.
   const L = useLayout();
   // Keyboard height is added to the list padding so the last rows stay reachable.
@@ -86,7 +87,11 @@ export function HomeScreen() {
   const loading = refreshing || demo === 'loading' || itemsLoading;
   // Empty preview shows no rows regardless of the filter/query.
   const shown = demo === 'empty' ? [] : items.filter((it) => matches(it, filter) && matchesQuery(it, query));
-  const noMatch = demo !== 'empty' && items.length > 0;
+  // Demo empty is a deliberate preview of a known empty result, not a pending load.
+  const hasResult = hasLoaded || demo === 'empty';
+  const mode = homeListMode({ loading, error, hasLoaded: hasResult, visibleCount: shown.length });
+  const showCount = showsItemCount({ mode, hasResult });
+  const noMatch = mode === 'empty' && demo !== 'empty' && items.length > 0;
   // Pad the last row so a lone card keeps column width instead of stretching.
   // Rows are padded to a full multiple of the column count.
   const data: (Item | null)[] = [...shown];
@@ -132,13 +137,20 @@ export function HomeScreen() {
           />
         ))}
       </ScrollView>
-      <View accessible accessibilityLabel={s.foundA11y(shown.length)} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-        <Tag sparkle>AI</Tag>
-        <Txt type="body">{s.found(shown.length)}</Txt>
-      </View>
+      {showCount && (
+        <View accessible accessibilityLabel={s.foundA11y(shown.length)} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+          <Tag sparkle>AI</Tag>
+          <Txt type="body">{s.found(shown.length)}</Txt>
+        </View>
+      )}
+      {mode === 'items' && hasMore && demo === 'ready' && (
+        <Txt type="caption" color="textSecondary">
+          {s.moreItems}
+        </Txt>
+      )}
       {(demo === 'error' || error) && (
         <ErrorBanner
-          message={items.length === 0 ? s.itemsLoadError : s.staleError}
+          message={hasLoaded ? s.staleError : s.itemsLoadError}
           onRetry={() => {
             setDemo('ready');
             reload();
@@ -149,25 +161,26 @@ export function HomeScreen() {
   );
 
   // ListEmptyComponent doubles as the skeleton host while loading.
-  const empty = loading ? (
-    <View>
-      {[0, 1, 2, 3].map((i) => (
-        <SkeletonCard key={i} />
-      ))}
-    </View>
-  ) : (
-    <EmptyState
-      // Items exist but nothing matches: say "no matches" rather than the first-use copy.
-      title={noMatch ? s.noMatchTitle : s.emptyTitle}
-      hint={noMatch ? s.noMatchHint : s.emptyHint}
-      actionLabel={noMatch ? s.clearFilters : s.showAll}
-      onAction={() => {
-        setQuery('');
-        setFilter('all');
-        setDemo('ready');
-      }}
-    />
-  );
+  const empty =
+    mode === 'loading' ? (
+      <View>
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonCard key={i} />
+        ))}
+      </View>
+    ) : mode === 'error' ? null : (
+      <EmptyState
+        // Items exist but nothing matches: say "no matches" rather than the first-use copy.
+        title={noMatch ? s.noMatchTitle : s.emptyTitle}
+        hint={noMatch ? (hasMore ? s.noMatchMoreHint : s.noMatchHint) : s.emptyHint}
+        actionLabel={noMatch ? s.clearFilters : s.showAll}
+        onAction={() => {
+          setQuery('');
+          setFilter('all');
+          setDemo('ready');
+        }}
+      />
+    );
 
   return (
     <Screen>
