@@ -36,7 +36,7 @@ These terms are a working draft. They describe how Magpie is intended to operate
 
 3.2 The licence covers transient processing: fetching the page, reading its metadata, and, for video posts, downloading the video to temporary storage for transcription and text extraction.
 
-3.3 Original media is deleted by the end of each background capture attempt, whether it succeeds or fails. It is not kept in Magpie's storage, not placed on a CDN, and not given a public URL.
+3.3 Original media is deleted before each background capture attempt ends, whether it succeeds or fails. If an attempt is interrupted by a crash or restart, the leftover temporary files are swept at startup. Original media is not kept in Magpie's storage, not placed on a CDN, and not given a public URL.
 
 3.4 The licence ends when processing ends, apart from the derived data described in section 6.
 
