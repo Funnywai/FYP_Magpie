@@ -24,7 +24,7 @@ import { useItems } from '../state/ItemsProvider';
 import { border, radius } from '../theme/tokens';
 import { useLayout } from '../theme/useLayout';
 import { useTheme } from '../theme/useTheme';
-import { homeListMode, showsItemCount } from './home-list';
+import { homeListMode, showsItemCount, showsMoreNotice } from './home-list';
 
 type FilterKey = 'all' | 'recipe' | 'place' | 'media' | 'processing';
 
@@ -143,7 +143,7 @@ export function HomeScreen() {
           <Txt type="body">{s.found(shown.length)}</Txt>
         </View>
       )}
-      {mode === 'items' && hasMore && demo === 'ready' && (
+      {showsMoreNotice({ hasMore, hasResult, filteredZero: noMatch, demoPreview: demo !== 'ready' }) && (
         <Txt type="caption" color="textSecondary">
           {s.moreItems}
         </Txt>

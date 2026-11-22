@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { homeListMode, showsItemCount } from './home-list';
+import { homeListMode, showsItemCount, showsMoreNotice } from './home-list';
 
 describe('homeListMode', () => {
   it('keeps loading while a request is in flight', () => {
@@ -43,5 +43,29 @@ describe('showsItemCount', () => {
 
   it('hides the count in a first-load error', () => {
     expect(showsItemCount({ mode: 'error', hasResult: false })).toBe(false);
+  });
+});
+
+describe('showsMoreNotice', () => {
+  const known = { hasMore: true, hasResult: true, filteredZero: false, demoPreview: false };
+
+  it('keeps the paging notice for a known result while a real refresh loads', () => {
+    expect(showsMoreNotice(known)).toBe(true);
+  });
+
+  it('hides the notice before the first result is known', () => {
+    expect(showsMoreNotice({ ...known, hasResult: false })).toBe(false);
+  });
+
+  it('hides the notice when the filter matches nothing so the scope hint stands alone', () => {
+    expect(showsMoreNotice({ ...known, filteredZero: true })).toBe(false);
+  });
+
+  it('hides the notice when there are no older items', () => {
+    expect(showsMoreNotice({ ...known, hasMore: false })).toBe(false);
+  });
+
+  it('hides the notice in a forced demo preview', () => {
+    expect(showsMoreNotice({ ...known, demoPreview: true })).toBe(false);
   });
 });

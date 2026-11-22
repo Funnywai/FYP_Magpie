@@ -28,3 +28,20 @@ export function homeListMode({ loading, error, hasLoaded, visibleCount }: HomeLi
 export function showsItemCount({ mode, hasResult }: ItemCountInput): boolean {
   return hasResult && mode !== 'error';
 }
+
+export type MoreNoticeInput = {
+  readonly hasMore: boolean;
+  readonly hasResult: boolean;
+  readonly filteredZero: boolean;
+  readonly demoPreview: boolean;
+};
+
+/**
+ * The paging note belongs to any known result, so it survives a real refresh
+ * that temporarily puts the list back into loading. A filtered-zero result
+ * already carries the same scope in its empty-state hint, and demo previews
+ * keep their forced state without paging copy.
+ */
+export function showsMoreNotice({ hasMore, hasResult, filteredZero, demoPreview }: MoreNoticeInput): boolean {
+  return hasMore && hasResult && !filteredZero && !demoPreview;
+}
