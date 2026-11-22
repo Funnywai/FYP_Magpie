@@ -80,12 +80,13 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | `content_type` | text | recipe \| place \| media \| generic |
 | `title` | text | nullable |
 | `caption` | text | nullable |
+| `author` | text | nullable; source author handle/display name when the platform exposes it — planned field, not in the current migrated schema |
 | `highlights` | jsonb | generated key points |
 | `labels` | text[] | semantic labels (topic, intent, location, entities) |
 | `status` | text | queued \| processing \| done \| needs_media \| failed |
 | `transcript_status` | text | pending \| processed \| not_applicable \| skipped |
-| `status_reason` | text | nullable; user-visible reason for terminal non-done status (`needs_media`, `failed`); optional for `processing` |
-| `capture_state` | jsonb | completed capture steps + failure reason; enables resuming from the last completed step |
+| `status_reason` | text | nullable; user-visible reason and next step for terminal non-done statuses (`needs_media`, `failed`); optional for `processing` |
+| `capture_state` | jsonb | completed capture steps + failure reason; enables resuming from the last completed step. The only record of intermediate capture completion — `status` keeps its five public values |
 
 ### 3.4 MediaAsset
 | Field | Type | Notes |
@@ -96,11 +97,11 @@ All tables have `id` (UUID PK), `created_at`, `updated_at`. Every user-owned tab
 | `timestamp_seconds` | numeric | nullable; for frames |
 | `ocr_text` | text | nullable |
 
-`frame` assets are downscaled stills (480 px wide, JPEG q70) retained as OCR evidence. When media storage is enabled (Step 4), they will be stored in a private bucket, owner-readable only, deleted with the item, never publicly addressable.
+`frame` assets are downscaled stills (480 px wide, JPEG q70) retained as OCR evidence. They will be stored in a private bucket, owner-readable only, deleted with the item, never publicly addressable — but only once that bucket is enabled.
 
 `audio` assets are only for audio the user supplies. Audio extracted from platform media is transient and never stored.
 
-Bucket provisioning (private bucket + owner-read RLS) is planned for Step 4; until then no media is persisted.
+Bucket provisioning (private bucket + owner-read RLS) is planned within Step 4. Media persistence stays gated until the bucket is enabled; until then no media is persisted.
 
 ### 3.5 TranscriptSegment
 | Field | Type | Notes |
@@ -137,16 +138,20 @@ Bucket provisioning (private bucket + owner-read RLS) is planned for Step 4; unt
 | `owner_id` | uuid FK → User | |
 | `name` | text | |
 | `description` | text | nullable |
-| `is_shared` | boolean | default false |
+| `is_shared` | boolean | default false; compatibility metadata only |
 | `parent_id` | uuid FK → Collection | nullable; enables nesting |
+
+`is_shared` is legacy compatibility metadata. It never grants access and never implies membership. Owner access comes from `owner_id`; non-owner access comes only from explicit `CollectionMember` rows (§3.13, §4.9).
 
 ### 3.9 CollectionItem
 | Field | Type | Notes |
 | --- | --- | --- |
 | `collection_id` | uuid FK → Collection | |
 | `item_id` | uuid FK → SavedItem | |
-| `added_by` | uuid FK → User | |
+| `added_by` | uuid FK → User | the member who linked the item |
 | `order_index` | int | |
+
+`added_by` carries attribution: it records which member created the link. Unlinking deletes the `CollectionItem` row only. The `SavedItem`, its derived data, and its other collection links are untouched, and ownership of the item never transfers.
 
 ### 3.10 Interaction
 | Field | Type | Notes |
@@ -176,6 +181,15 @@ Bucket provisioning (private bucket + owner-read RLS) is planned for Step 4; unt
 | `indoor_outdoor` | text | indoor \| outdoor \| mixed |
 | `order_index` | int | |
 
+### 3.13 CollectionMember
+| Field | Type | Notes |
+| --- | --- | --- |
+| `collection_id` | uuid FK → Collection | |
+| `user_id` | uuid FK → User | |
+| `role` | text | viewer \| editor |
+
+`(collection_id, user_id)` is unique. The owner is `Collection.owner_id` and is not stored as a member row. Member roles grant scoped access only; they never transfer ownership of the collection or of any member's items.
+
 ---
 
 ## 4. Feature Behaviour
@@ -185,10 +199,10 @@ Each feature below is a contract. "Done" is defined in §6.
 ### 4.1 Capture & Extraction
 
 **Input:** a shared URL (and optionally a shared file or screen recording).
-**Output:** a `SavedItem` in status `done` with all applicable artifacts: caption, transcript, frames, and extracted fields; or `needs_media` with a reason.
+**Output:** a `SavedItem` that ends in `done` only when every applicable capture output for the source exists — caption, ASR transcript, and OCR text (applicability follows the `transcript_status` and media rules below and in §4.1.1). Once Step 5 is enabled, `done` additionally requires the applicable representation, validated extracted fields, and embeddings. Otherwise the item ends in `needs_media` or `failed` with a user-visible reason and next step.
 
 **Behavior:**
-1. Create a `SavedItem` with status `queued` and `transcript_status` `pending`; return the id immediately (do not block the client).
+1. Create a `SavedItem` with status `queued` and `transcript_status` `pending`; return `{ itemId, status: 'queued' }` before any media fetch, download, temp-directory cleanup, or model work begins. All capture work runs in the background and never blocks or extends the request.
 2. Resolve the platform from the URL host.
 3. Capture strategy, in order:
    - YouTube URL → pass directly to the model provider (public video).
@@ -196,8 +210,8 @@ Each feature below is a contract. "Done" is defined in §6.
    - If no usable media and the platform blocks access → set status `needs_media`, store the reason, and prompt the user to share a video file / screen recording.
 4. From usable media: extract audio and select frames (scene detection, capped count).
 5. Transcribe audio (Cantonese-aware) and OCR frames. Set `transcript_status` to `processed` when ASR completes, `not_applicable` when the source has no audio track, or `skipped` when a video is processed caption-only; keep `pending` until then.
-6. Set status `processing → done`. Persist every intermediate artefact so retries resume from the last completed step.
-7. Delete the original media after `done`. Once media storage is enabled (Step 4), keep only derived assets (thumbnails, transcript, frames).
+6. Set status `processing → done` by running the enabled pipeline steps in order (capture, plus representation once Step 5 is enabled); `done` requires the completion conditions for those steps (§4.1 output, §7). Persist only allowed intermediate artefacts — never disallowed media or raw embed HTML — so retries resume from the last completed step. Track intermediate capture completion in `capture_state`; do not add new public `status` values — `status` remains `queued | processing | done | needs_media | failed`.
+7. Run cleanup in a `finally` block before the attempt ends, on success or failure: delete the original media and the whole temp directory. Persist only allowed derivatives — caption, author (when available), transcript segments, extracted fields, embeddings, the re-hosted thumbnail, and OCR frames; never the original video/audio or the raw embed HTML. Media persistence (thumbnail/frames in a private bucket) stays gated until the private bucket and owner-read RLS in §3.4 are enabled; until then, keep only non-media derivatives.
 
 `transcript_status` semantics:
 
@@ -211,7 +225,7 @@ Only `skipped` triggers the "speech was not processed" UI notice.
 **Edge cases:**
 - Unreachable/private/expired URL → `failed` with a readable reason.
 - Unsupported platform → capture what metadata is available; item proceeds as `generic` if text exists.
-- Never fail silently: every terminal non-`done` status (`needs_media`, `failed`) carries a user-visible reason and next step; `processing` may carry progress.
+- Never fail silently: every terminal non-`done` status (`needs_media`, `failed`) is retained with a user-visible reason and next step, and is never collapsed into `done` or into the other state; `processing` may carry progress.
 
 #### 4.1.1 Instagram Reels (platform-specific)
 
@@ -219,7 +233,7 @@ Instagram publishes no public content API. This branch is bounded to a single pu
 
 **URL normalization.** Accept `instagram.com/reel/{sc}`, `instagram.com/reels/{sc}`, and `instagram.com/p/{sc}`. Strip tracking parameters such as `rpxt` and `exln`. A URL with no shortcode returns `failed` with `unsupported_url`.
 
-**Embed fetch.** One logical embed fetch per explicitly shared URL: a single `GET https://www.instagram.com/reel/{shortcode}/embed/` plus at most 2 retries with backoff (3 requests total), 8 s timeout per attempt, no cookies, no proxy pool, no headless browser, no account or feed crawling.
+**Embed fetch.** At most one logical embed fetch per explicitly shared URL, budgeted at 3 HTTP requests total across the whole capture job: the initial `GET https://www.instagram.com/reel/{shortcode}/embed/` plus at most 2 retries with backoff. The budget is shared across job attempts and does not reset when an attempt resumes or retries. Each embed HTTP request has an 8 s timeout. No cookies, no proxy pool, no headless browser, no account or feed crawling. Once the embed fetch succeeds, never issue a second logical fetch for that capture job; later failures are handled from the fetched data.
 
 **Parsing.** The parser is a pure function: no network, no database. Read the caption at `edge_media_to_caption.edges[0].node.text`. Use three ordered sources: (1) a balanced-brace slice starting at the `"edge_media_to_caption"` key, parsed with `JSON.parse`; (2) the same slice unescaped exactly once, parsed again; (3) `og:description`, `"owner":{"username":...}`, and `"video_url"` as independent fallbacks. Never globally replace `\"` with `"`: captions containing quotes break. The balanced-brace scanner must respect string literals, escapes, and nested braces. Accept `video_url` only after `new URL()` validation. Use `data-media-type` to distinguish `GraphVideo` from `GraphImage`.
 
@@ -230,14 +244,15 @@ Instagram publishes no public content API. This branch is bounded to a single pu
 | `GraphImage` | Caption only, no media download. |
 | `GraphVideo` | Transient media path (audio + frames). |
 | `GraphVideo`, transient path fails | `needs_media` with a user-visible reason and next step. |
+| `GraphVideo`, embed succeeded but its media URL expired before any usable media was obtained under `video_first` | `needs_media` with a user-visible reason and next step; do not re-fetch the embed page. |
 
-`video_first` fetches every `GraphVideo` to maximise extraction accuracy. `never` disables the transient path for demos or offline runs; every Instagram item is caption-only. A caption-only `GraphVideo` is `done` with `transcript_status` `skipped`, and the UI must state that speech was not processed. `GraphImage` items set `transcript_status` `not_applicable` and need no such notice.
+`video_first` fetches every `GraphVideo` to maximise extraction accuracy. `never` disables the transient path for demos or offline runs; every Instagram item is caption-only. A caption-only `GraphVideo` sets `transcript_status` `skipped` and follows the §4.1 completion conditions, so it is `done` only when they are met; the UI must state that speech was not processed. `GraphImage` items set `transcript_status` `not_applicable` and need no such notice.
 
 Phase 1 removes the 80-character caption heuristic and per-category sufficiency rules. Phase 2 may add a caption-sufficiency classifier as a cost optimisation, measured against a labelled set of real reels.
 
-**Transient path.** Download to `os.tmpdir()/magpie/{itemId}/`, never Supabase Storage, never a CDN, never a public URL. 200 MB cap, `content-type: video/*` validation, overall timeout. Extract audio with `ffmpeg -vn -ac 1 -ar 16000`. Extract frames with `select='gt(scene,0.3)'`, at most 5 frames, downscaled to 480 px wide JPEG q70 before OCR. Delete the whole temp directory in a `finally` block, on success and on failure. Sweep stale temp directories at startup.
+**Transient path.** Download to `os.tmpdir()/magpie/{itemId}/`, never Supabase Storage, never a CDN, never a public URL. 200 MB cap, `content-type: video/*` validation, overall timeout. Extract audio with `ffmpeg -vn -ac 1 -ar 16000`. Extract frames with `select='gt(scene,0.3)'`, at most 5 frames, downscaled to 480 px wide JPEG q70 before OCR. Delete the whole temp directory in a `finally` block that runs before each background attempt ends, on success and on failure. Sweep stale temp directories at startup to clear cleanup left interrupted by a crash or restart mid-attempt.
 
-**No-persist rule.** Never persist the original video, the extracted audio, or the raw embed HTML. Keep only caption, author, transcript segments, extracted fields, embeddings, the re-hosted thumbnail, and OCR frames. Once media storage is enabled (Step 4), the thumbnail is a small private-bucket copy; never store the expiring Instagram CDN URL. There is no in-app playback of another party's media: show the thumbnail and link out to the source.
+**No-persist rule.** Persist only allowed derivatives. Never persist the original video, the extracted audio, or the raw embed HTML. Keep only caption, author (when available), transcript segments, extracted fields, embeddings, the re-hosted thumbnail, and OCR frames. Media storage stays gated on the §3.4 private bucket; once enabled, the thumbnail is a small private-bucket copy; never store the expiring Instagram CDN URL. There is no in-app playback of another party's media: show the thumbnail and link out to the source.
 
 ### 4.2 Representation & Semantic Labelling
 
@@ -309,7 +324,23 @@ Phase 1 removes the 80-character caption heuristic and per-category sufficiency 
 
 - Collections can nest via `parent_id`.
 - Items can be added to / removed from collections; batches supported.
-- Shared collections are visible to invited users; RLS governs access.
+- Owner access comes from `collections.owner_id`. Non-owner access is granted only by explicit `CollectionMember` rows. `is_shared` is compatibility metadata only; it never authorizes access or implies membership.
+
+**Role matrix:**
+
+| Capability | Owner (`collections.owner_id`) | Editor | Viewer |
+| --- | --- | --- | --- |
+| Read collection and its item links | yes | yes | yes |
+| Manage members (add, change role, remove) | yes | no | no |
+| Edit collection metadata, delete collection | yes | no | no |
+| Link own saved items (`added_by` = self) | yes | yes | no |
+| Reorder or remove item links | yes | yes | no |
+
+- Within a shared collection, viewers can read the collection and its item links but cannot mutate either. This places no restriction on a user editing their own saved items or private collections.
+- Only the owner manages members and collection metadata, and only the owner deletes a collection.
+- Reading a collection covers the collection row and its item links. Linked `SavedItem` rows and their derived data stay readable only by their owner; membership never exposes another member's item content.
+- A user with no member row and no ownership cannot read the collection or its links. Roles do not inherit through nesting: membership of a parent is not membership of its children, and vice versa.
+- Current scope is database and RLS only. No API routes or UI for members are delivered yet.
 
 ---
 
@@ -334,7 +365,8 @@ REST under `/api`. All routes require auth unless noted. All responses are JSON 
 | `GET` | `/health` | Liveness (no auth) |
 
 **Contract rules:**
-- Capture is always asynchronous: `POST /capture` returns fast; the client polls `GET /items/:id` for status.
+- Capture is always asynchronous: `POST /capture` persists the item as `queued` and returns `{ itemId, status: 'queued' }` before any media fetch, download, temp cleanup, or model work begins; the client polls `GET /items/:id` for status.
+- Intermediate capture completion is exposed through `capture_state`, not new `status` values; `status` stays `queued | processing | done | needs_media | failed`, and terminal non-done statuses carry a reason and next step.
 - Auth: a missing, malformed, invalid, or expired token returns `401 UNAUTHENTICATED`, and the client may refresh the session once. A temporarily unavailable JWKS returns `503 INTERNAL` with `Authentication temporarily unavailable`; this is not a bad session, so the client keeps it and does not refresh or sign out.
 - `GET /items` currently returns one newest-first page of up to 20 items as `{ items, hasMore, nextCursor }`. `hasMore` reports whether older items exist; `nextCursor` is always `null` until cursor pagination ships with search in Step 6. Client-side search and filters cover only this loaded page, and the UI must say more items are not loaded when `hasMore` is true.
 - Client list states: loading shows skeletons, a first-load failure shows an error with retry, and the empty state appears only after a successful zero result. A failed refresh after a successful load keeps the last successful rows instead of clearing them, behind a stale-data banner. The item count renders only once a result is known and not during a first-load error.
@@ -364,8 +396,8 @@ Build in this order; later items are optional until the earlier ones are solid.
 1. Monorepo scaffold + CI + Supabase schema (RLS) + local Docker DB. *(pure skeleton — no feature logic)*
 2. Auth end-to-end (Supabase Auth): sign-up/in, JWT issuance, one protected route.
 3. Mobile shell: share intake, item list, item detail.
-4. Capture pipeline for one platform end-to-end (caption → transcript → OCR).
-5. Representation, categorisation, highlights, embeddings.
+4. Capture pipeline for one platform end-to-end (caption → transcript → OCR). A Step-4 item is `done` only when every applicable capture output exists; representation, validated fields, and embeddings are not required yet. Media persistence stays gated until the §3.4 private bucket and owner-read RLS are enabled.
+5. Representation, categorisation, highlights, embeddings. Once enabled, `done` additionally requires the applicable representation, validated extracted fields, and embeddings.
 6. Vector search + filters + retrieval UI.
 7. Field correction + confidence display.
 8. Personalised ranking from interactions.
@@ -378,8 +410,8 @@ Build in this order; later items are optional until the earlier ones are solid.
 
 ## 8. Out of Scope
 
-- Unbounded or bulk server-side scraping. Server-side fetching is permitted only through the bounded, per-request pipeline for a single public URL the user explicitly shared: one logical embed fetch (initial attempt plus bounded retries), no cookies, no proxy pool, no headless browser, no crawling of accounts, feeds, or other users' content.
-- Persistent storage or re-hosting of original media. Original video and audio may exist only as transient files outside the storage layer, deleted within the same request in a `finally` block — no public URL, no CDN, no in-app playback of another party's media.
+- Unbounded or bulk server-side scraping. Server-side fetching is permitted only through the bounded, per-capture-job pipeline for a single public URL the user explicitly shared: one logical embed fetch (initial attempt plus at most 2 retries, 3 requests total per capture job, never a second fetch after success), no cookies, no proxy pool, no headless browser, no crawling of accounts, feeds, or other users' content.
+- Persistent storage or re-hosting of original media. Original video and audio may exist only as transient files outside the storage layer, deleted in a `finally` block before each background attempt ends (success or failure), with interrupted cleanup swept at startup — no public URL, no CDN, no in-app playback of another party's media.
 - Redistributing original videos or operating a mirror of any platform's content.
 - Music/streaming account integration (identification + search links only, if built).
 - Cross-platform price comparison / scraping e-commerce sites.
@@ -390,10 +422,10 @@ Build in this order; later items are optional until the earlier ones are solid.
 
 ## 9. Key Constraints
 
-- **Privacy:** original media is deleted after processing; only derived data is stored.
+- **Privacy:** original media is deleted when the attempt ends, on success or failure; only allowed derivatives (caption, author when available, transcript, extracted fields, embeddings, thumbnail/OCR frames) are stored — never the original media or raw embed HTML.
 - **Legal:** only public content the user explicitly shares is processed.
-- **Reliability:** platform access may fail — `needs_media` is a first-class outcome, not an error.
+- **Reliability:** platform access may fail — `needs_media` is a first-class outcome, not an error; `needs_media` and `failed` stay terminal with a reason and next step.
 - **Cost:** cache model and external API responses; do not re-process unchanged items.
 - **Latency:** capture is async; the app must remain usable while processing.
-- **Bounded processing:** server-side fetching is limited to the bounded, per-request pipeline for a single public URL the user explicitly shared: one logical embed fetch (initial attempt plus bounded retries), no cookies, no proxy pool, no headless browser, no crawling, and transient media deleted within the same request.
+- **Bounded processing:** server-side fetching is limited to the bounded, per-capture-job pipeline for a single public URL the user explicitly shared: one logical embed fetch (initial attempt plus at most 2 retries, 3 requests total per capture job, never a second fetch after success), no cookies, no proxy pool, no headless browser, no crawling, and transient media deleted in a `finally` block before each attempt ends, with interrupted cleanup swept at startup.
 - **Terms and takedown:** user-submitted content is governed by the in-app terms (user warranty, transient-processing licence, rights defects borne by the user), and a monitored takedown channel deletes the item and all derived data — transcript, frames, extracted fields, embeddings — not only the media.
