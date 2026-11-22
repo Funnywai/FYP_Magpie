@@ -24,8 +24,9 @@ function failureFor(saved: SavedItem): Failure | undefined {
           next: { zh: strings.zh.needsMediaNextFallback, en: strings.en.needsMediaNextFallback },
         };
 
-  const reason = saved.statusReason?.trim();
-  return reason ? { reason: { zh: reason, en: reason }, next: fallback.next } : fallback;
+  // SPEC §5: render a nonblank reason exactly as stored, whitespace included.
+  const reason = saved.statusReason;
+  return reason && reason.trim() ? { reason: { zh: reason, en: reason }, next: fallback.next } : fallback;
 }
 
 /**

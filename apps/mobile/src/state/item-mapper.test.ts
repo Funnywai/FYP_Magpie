@@ -56,6 +56,28 @@ describe('toUiItem', () => {
     });
   });
 
+  it('keeps a nonblank status reason exactly as stored', () => {
+    const stored = '  Link moved.\nRetry later.  ';
+    const mapped = toUiItem({ ...saved, status: 'failed', statusReason: stored });
+
+    expect(mapped.failure?.reason).toEqual({ zh: stored, en: stored });
+  });
+
+  it('uses the localized fallback when a status reason is only whitespace', () => {
+    const mapped = toUiItem({ ...saved, status: 'needs_media', statusReason: ' \n\t ' });
+
+    expect(mapped.failure).toEqual({
+      reason: {
+        zh: strings.zh.needsMediaReasonFallback,
+        en: strings.en.needsMediaReasonFallback,
+      },
+      next: {
+        zh: strings.zh.needsMediaNextFallback,
+        en: strings.en.needsMediaNextFallback,
+      },
+    });
+  });
+
   it('uses localized fallbacks when a needs_media item has no status reason', () => {
     const mapped = toUiItem({ ...saved, status: 'needs_media', statusReason: null });
 

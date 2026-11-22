@@ -60,7 +60,7 @@ const zh = {
   failedReasonFallback: '呢個項目處理失敗。',
   failedNextFallback: '請確認連結係公開，然後再儲存一次。',
   needsMediaReasonFallback: '未能取得原片，只儲存咗貼文資料。',
-  needsMediaNextFallback: '原片載入到時，再儲存呢條連結。',
+  needsMediaNextFallback: '請保留原片或螢幕錄影；分享檔案功能仲未開放，開放後再儲存。',
   statusA11y: (t: string) => `狀態：${t}`,
   confidence: (n: number) => `信心 ${n}%${n < 50 ? '，請核對' : ''}`,
   // Field confidence
@@ -209,7 +209,7 @@ const en: Strings = {
   failedReasonFallback: 'This item could not be processed.',
   failedNextFallback: 'Check that the link is public, then save it again.',
   needsMediaReasonFallback: 'The video was unavailable, so only the post was saved.',
-  needsMediaNextFallback: 'Save the link again when the video can be loaded.',
+  needsMediaNextFallback: 'Keep the original video or a screen recording; sharing a file is not available yet, so save it again once it is.',
   statusA11y: (t) => `Status: ${t}`,
   confidence: (n) => `Confidence ${n}%${n < 50 ? ', please check' : ''}`,
   // Field confidence
