@@ -61,7 +61,9 @@ describe('apiFetch', () => {
       .mockResolvedValueOnce(session(SESSION_A))
       .mockResolvedValueOnce(session(SESSION_A))
       .mockResolvedValueOnce(session(SESSION_A2));
-    vi.mocked(fetch).mockResolvedValueOnce(unauthorized()).mockResolvedValueOnce(ok({ ok: true }));
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(ok({ ok: true }));
 
     await expect(apiFetch('/api/items')).resolves.toEqual({ ok: true });
 
@@ -143,5 +145,22 @@ describe('apiFetch', () => {
     } as Response);
 
     await expect(apiFetch('/api/items')).rejects.toMatchObject({ code: 'INTERNAL' });
+  });
+
+  it('does not refresh or sign out when auth is temporarily unavailable', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({
+        error: { code: 'INTERNAL', message: 'Authentication temporarily unavailable' },
+      }),
+    } as Response);
+
+    await expect(apiFetch('/api/items')).rejects.toMatchObject({
+      code: 'INTERNAL',
+      message: 'Authentication temporarily unavailable',
+    });
+    expect(refreshSession).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
   });
 });
