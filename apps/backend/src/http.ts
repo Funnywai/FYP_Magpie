@@ -23,6 +23,14 @@ function requestUrl(input: FetchInput): string {
   return input.url;
 }
 
+// Match native Request precedence: a non-null init.signal replaces the input
+// Request's signal, an explicit null clears it, and undefined/absent inherits it.
+function callerSignal(input: FetchInput, init?: FetchInit): AbortSignal | null {
+  if (init?.signal) return init.signal;
+  if (init?.signal === null) return null;
+  return input instanceof Request ? input.signal : null;
+}
+
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -44,13 +52,14 @@ export function createHttpClient(options: HttpClientOptions = {}): Fetch {
     const method = requestMethod(input, init);
     const url = requestUrl(input);
     const logUrl = url.split('?')[0] ?? url;
+    const callerAbort = callerSignal(input, init);
     const attempts = IDEMPOTENT_METHODS.has(method) ? retries + 1 : 1;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const timeout = new AbortController();
       const timer = setTimeout(() => timeout.abort(new Error('HTTP timeout')), timeoutMs);
       timer.unref();
-      const signal = init?.signal ? AbortSignal.any([init.signal, timeout.signal]) : timeout.signal;
+      const signal = callerAbort ? AbortSignal.any([callerAbort, timeout.signal]) : timeout.signal;
       const startedAt = Date.now();
 
       try {
@@ -78,7 +87,7 @@ export function createHttpClient(options: HttpClientOptions = {}): Fetch {
             error instanceof Error ? error.message : 'unknown error'
           }`,
         );
-        if (init?.signal?.aborted || attempt === attempts) throw error;
+        if (callerAbort?.aborted || attempt === attempts) throw error;
         await wait(baseDelayMs * 2 ** (attempt - 1));
       }
     }
