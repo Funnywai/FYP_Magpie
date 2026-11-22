@@ -6,6 +6,22 @@ function response(status: number): Response {
   return new Response(status === 204 ? null : '{}', { status });
 }
 
+/** Behaves like a real transport: the response body errors when the request aborts. */
+function streamingResponse(init?: RequestInit): Response {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      init?.signal?.addEventListener('abort', () => controller.error(init.signal?.reason), { once: true });
+    },
+  });
+  return new Response(body, { status: 200 });
+}
+
+function streamingFetch(): ReturnType<typeof vi.fn> {
+  return vi.fn().mockImplementation((_input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+    Promise.resolve(streamingResponse(init)),
+  );
+}
+
 beforeEach(() => {
   vi.spyOn(console, 'info').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -87,4 +103,30 @@ describe('createHttpClient', () => {
 
     await expect(client('https://example.test/resource')).rejects.toThrow('HTTP timeout');
   });
+
+  it(
+    'keeps the timeout active while the response body is read',
+    async () => {
+      const client = createHttpClient({ fetchImpl: streamingFetch(), timeoutMs: 10, retries: 0 });
+
+      const result = await client('https://example.test/resource');
+
+      await expect(result.text()).rejects.toThrow('HTTP timeout');
+    },
+    1000,
+  );
+
+  it(
+    'keeps the caller abort signal connected while the response body is read',
+    async () => {
+      const client = createHttpClient({ fetchImpl: streamingFetch(), timeoutMs: 1000, retries: 0 });
+      const caller = new AbortController();
+
+      const result = await client('https://example.test/resource', { signal: caller.signal });
+      caller.abort();
+
+      await expect(result.text()).rejects.toThrow();
+    },
+    1000,
+  );
 });
