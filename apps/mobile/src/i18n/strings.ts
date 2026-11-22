@@ -57,6 +57,10 @@ const zh = {
   // Content types and status
   contentLabel: { recipe: '食譜', place: '地點', media: '影視', generic: '其他' },
   statusLabel: { queued: '排隊中', processing: '處理中', done: '已完成', needs_media: '需要錄影', failed: '失敗' },
+  failedReasonFallback: '呢個項目處理失敗。',
+  failedNextFallback: '請確認連結係公開，然後再儲存一次。',
+  needsMediaReasonFallback: '未能取得原片，只儲存咗貼文資料。',
+  needsMediaNextFallback: '原片載入到時，再儲存呢條連結。',
   statusA11y: (t: string) => `狀態：${t}`,
   confidence: (n: number) => `信心 ${n}%${n < 50 ? '，請核對' : ''}`,
   // Field confidence
@@ -202,6 +206,10 @@ const en: Strings = {
   // Content types and status
   contentLabel: { recipe: 'Recipe', place: 'Place', media: 'Film & TV', generic: 'Other' },
   statusLabel: { queued: 'Queued', processing: 'Processing', done: 'Done', needs_media: 'Needs video', failed: 'Failed' },
+  failedReasonFallback: 'This item could not be processed.',
+  failedNextFallback: 'Check that the link is public, then save it again.',
+  needsMediaReasonFallback: 'The video was unavailable, so only the post was saved.',
+  needsMediaNextFallback: 'Save the link again when the video can be loaded.',
   statusA11y: (t) => `Status: ${t}`,
   confidence: (n) => `Confidence ${n}%${n < 50 ? ', please check' : ''}`,
   // Field confidence

@@ -1,6 +1,7 @@
 import type { SavedItem } from '@magpie/shared';
 import { describe, expect, it } from 'vitest';
 
+import { strings } from '../i18n/strings';
 import { toUiItem } from './item-mapper';
 
 const saved: SavedItem = {
@@ -41,5 +42,38 @@ describe('toUiItem', () => {
 
   it('falls back to the source URL when the title is missing', () => {
     expect(toUiItem({ ...saved, title: null }).title).toBe(saved.sourceUrl);
+  });
+
+  it('surfaces a failed item status reason with a localized next step', () => {
+    const mapped = toUiItem({ ...saved, status: 'failed', statusReason: 'The link is dead.' });
+
+    expect(mapped.failure).toEqual({
+      reason: { zh: 'The link is dead.', en: 'The link is dead.' },
+      next: {
+        zh: strings.zh.failedNextFallback,
+        en: strings.en.failedNextFallback,
+      },
+    });
+  });
+
+  it('uses localized fallbacks when a needs_media item has no status reason', () => {
+    const mapped = toUiItem({ ...saved, status: 'needs_media', statusReason: null });
+
+    expect(mapped.failure).toEqual({
+      reason: {
+        zh: strings.zh.needsMediaReasonFallback,
+        en: strings.en.needsMediaReasonFallback,
+      },
+      next: {
+        zh: strings.zh.needsMediaNextFallback,
+        en: strings.en.needsMediaNextFallback,
+      },
+    });
+  });
+
+  it('does not show a failure for a finished item that carries a status reason', () => {
+    const mapped = toUiItem({ ...saved, status: 'done', statusReason: 'internal note' });
+
+    expect(mapped.failure).toBeUndefined();
   });
 });
