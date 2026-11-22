@@ -45,7 +45,7 @@ User shares a public URL to the app
 - TypeScript strict mode. No `any`, no `@ts-ignore`.
 - Shared request/response and domain types live in `packages/shared` — define once, import on both sides.
 - AI model calls go through a provider abstraction (`apps/backend/src/ai/providers`) so providers are swappable.
-- All external HTTP calls go through one wrapper (timeouts, retry/backoff, logging).
+- All external HTTP calls go through one wrapper (timeouts, retry/backoff, logging). A request's per-attempt timeout and caller abort stay active while the response body is read, not only until headers arrive.
 - All model output is validated against a schema before use.
 
 ---
@@ -320,7 +320,7 @@ REST under `/api`. All routes require auth unless noted. All responses are JSON 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `POST` | `/capture` | Submit a URL (+ optional file); returns `{ itemId, status }` |
-| `GET` | `/items` | List the user's items (filters, pagination) |
+| `GET` | `/items` | First page of the user's items, newest first (up to 20); cursor pagination planned for Step 6 |
 | `GET` | `/items/:id` | Item detail incl. extracted fields + evidence |
 | `DELETE` | `/items/:id` | Delete an item and all derived data |
 | `PATCH` | `/items/:id/fields/:fieldId` | Correct an extracted field |
@@ -335,6 +335,10 @@ REST under `/api`. All routes require auth unless noted. All responses are JSON 
 
 **Contract rules:**
 - Capture is always asynchronous: `POST /capture` returns fast; the client polls `GET /items/:id` for status.
+- Auth: a missing, malformed, invalid, or expired token returns `401 UNAUTHENTICATED`, and the client may refresh the session once. A temporarily unavailable JWKS returns `503 INTERNAL` with `Authentication temporarily unavailable`; this is not a bad session, so the client keeps it and does not refresh or sign out.
+- `GET /items` currently returns one newest-first page of up to 20 items as `{ items, hasMore, nextCursor }`. `hasMore` reports whether older items exist; `nextCursor` is always `null` until cursor pagination ships with search in Step 6. Client-side search and filters cover only this loaded page, and the UI must say more items are not loaded when `hasMore` is true.
+- Client list states: loading shows skeletons, a first-load failure shows an error with retry, and the empty state appears only after a successful zero result. A failed refresh after a successful load keeps the last successful rows instead of clearing them, behind a stale-data banner. The item count renders only once a result is known and not during a first-load error.
+- Terminal non-done items render their stored `status_reason` verbatim, with a localized fallback when it is absent, plus a localized next step; `done` never renders failure copy.
 - Errors use a consistent shape: `{ error: { code, message } }`.
 - Never return raw model output; always the validated, typed shape.
 

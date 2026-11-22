@@ -55,6 +55,17 @@ Supabase (Postgres) database, with a single set of shared TypeScript types.
 - Backend: `GET /api/health` and a protected `GET /api/items` (JWKS auth + RLS); no AI calls yet.
 - Next: capture pipeline (Phase 3, Nov–Dec 2026).
 
+## Implementation notes (22 Nov 2026)
+
+| Area | Current behaviour |
+| --- | --- |
+| Outbound HTTP | One wrapper (`apps/backend/src/http.ts`): a default 10 s timeout per attempt and up to 2 retries with exponential backoff for eligible `GET`/`HEAD` failures. The timeout and caller abort stay active while the response body is read, so a stalled body still fails. |
+| Auth failures | A missing, malformed, invalid, or expired token returns `401 UNAUTHENTICATED`. A JWKS timeout, connection failure, or non-200 response returns `503 INTERNAL` with "Authentication temporarily unavailable". Missing auth config fails the process at boot. |
+| Mobile session | On `401` the app tries to refresh once. If refresh succeeds but the retried request still returns `401`, the app signs out locally if the same user is still signed in. A `503` neither triggers a session refresh nor clears the session. |
+| Saved-item list | `GET /api/items` returns up to 20 items, newest first, plus `hasMore`, decided by a 21st probe row; `nextCursor` stays `null`. Cursor pagination and the search/filter API are not shipped. |
+| Home list states | Skeletons while the first result is pending; a first-load failure shows an error with retry; empty appears only after a known empty result. A failed refresh keeps the last successful rows and shows a stale-data banner. The UI notes when older items are not loaded. |
+| Item status copy | `failed` and `needs_media` cards render the stored `status_reason` (localized fallback when absent) plus a next step. This is display only; the capture pipeline is not shipped. |
+
 ## Planned but NOT yet integrated
 
 The following are specified in `SPEC.md` but **not wired up yet** (Phase 3 onward):
