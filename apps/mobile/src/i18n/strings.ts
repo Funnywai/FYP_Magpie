@@ -34,8 +34,10 @@ const zh = {
   foundA11y: (n: number) => `AI 找到 ${n} 個相關項目`,
   staleError: '更新失敗，以下係上次儲存嘅內容。',
   itemsLoadError: '載入收藏失敗，請再試一次。',
+  moreItems: '只顯示最新一批項目，仲有更多未載入。',
   noMatchTitle: '搵唔到相符嘅項目',
   noMatchHint: '試下改關鍵字，或者清除篩選。',
+  noMatchMoreHint: '篩選只套用於最新一批項目，仲有更多未載入。',
   speechNotProcessed: '呢條短片冇處理語音，以下資料只來自文字說明同畫面。',
   noDetailsYet: '資料仲未抽取，之後會喺度顯示重點同欄位。',
   clearFilters: '清除搜尋同篩選',
@@ -55,6 +57,10 @@ const zh = {
   // Content types and status
   contentLabel: { recipe: '食譜', place: '地點', media: '影視', generic: '其他' },
   statusLabel: { queued: '排隊中', processing: '處理中', done: '已完成', needs_media: '需要錄影', failed: '失敗' },
+  failedReasonFallback: '呢個項目處理失敗。',
+  failedNextFallback: '請確認連結係公開，然後再儲存一次。',
+  needsMediaReasonFallback: '未能取得原片，只儲存咗貼文資料。',
+  needsMediaNextFallback: '請保留原片或螢幕錄影；分享檔案功能仲未開放，開放後再儲存。',
   statusA11y: (t: string) => `狀態：${t}`,
   confidence: (n: number) => `信心 ${n}%${n < 50 ? '，請核對' : ''}`,
   // Field confidence
@@ -177,8 +183,10 @@ const en: Strings = {
   foundA11y: (n) => `AI found ${n} related ${n === 1 ? 'item' : 'items'}`,
   staleError: 'Update failed. Showing what was saved last time.',
   itemsLoadError: 'Could not load your saved items. Try again.',
+  moreItems: 'Showing the newest items only; more are not loaded yet.',
   noMatchTitle: 'No matches',
   noMatchHint: 'Try different words or clear the filter.',
+  noMatchMoreHint: 'Filters apply to the newest items only; more are not loaded yet.',
   speechNotProcessed: 'Speech was not processed for this clip. Details come from the caption and on-screen text only.',
   noDetailsYet: 'Nothing extracted yet. Highlights and fields will appear here.',
   clearFilters: 'Clear search and filter',
@@ -198,6 +206,10 @@ const en: Strings = {
   // Content types and status
   contentLabel: { recipe: 'Recipe', place: 'Place', media: 'Film & TV', generic: 'Other' },
   statusLabel: { queued: 'Queued', processing: 'Processing', done: 'Done', needs_media: 'Needs video', failed: 'Failed' },
+  failedReasonFallback: 'This item could not be processed.',
+  failedNextFallback: 'Check that the link is public, then save it again.',
+  needsMediaReasonFallback: 'The video was unavailable, so only the post was saved.',
+  needsMediaNextFallback: 'Keep the original video or a screen recording; sharing a file is not available yet, so save it again once it is.',
   statusA11y: (t) => `Status: ${t}`,
   confidence: (n) => `Confidence ${n}%${n < 50 ? ', please check' : ''}`,
   // Field confidence

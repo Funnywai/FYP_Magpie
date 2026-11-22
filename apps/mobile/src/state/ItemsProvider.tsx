@@ -13,6 +13,8 @@ type ItemsApi = {
   items: Item[];
   loading: boolean;
   error: boolean;
+  hasLoaded: boolean;
+  hasMore: boolean;
   demo: DemoState;
   setDemo: (next: DemoState) => void;
   reload: () => void;
@@ -30,6 +32,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [demo, setDemo] = useState<DemoState>('ready');
   const requestId = useRef(0);
 
@@ -41,6 +45,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
       setItems([]);
       setError(false);
       setLoading(false);
+      setHasLoaded(false);
+      setHasMore(false);
       return;
     }
 
@@ -50,8 +56,11 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
       const response = await listItems();
       if (requestId.current !== id) return;
       setItems(response.items.map(toUiItem));
+      setHasLoaded(true);
+      setHasMore(response.hasMore);
     } catch {
       if (requestId.current !== id) return;
+      // Keep the last successful rows and paging flag: the banner explains they are stale.
       setError(true);
     } finally {
       if (requestId.current === id) setLoading(false);
@@ -74,6 +83,8 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
       items,
       loading,
       error,
+      hasLoaded,
+      hasMore,
       demo,
       setDemo,
       reload: () => void reload(),
@@ -94,7 +105,7 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
         })),
       add: (item) => setItems((all) => [item, ...all]),
     }),
-    [items, loading, error, demo, reload, patch],
+    [items, loading, error, hasLoaded, hasMore, demo, reload, patch],
   );
 
   return <ItemsContext.Provider value={api}>{children}</ItemsContext.Provider>;

@@ -23,6 +23,14 @@ function requestUrl(input: FetchInput): string {
   return input.url;
 }
 
+// Match native Request precedence: a non-null init.signal replaces the input
+// Request's signal, an explicit null clears it, and undefined/absent inherits it.
+function callerSignal(input: FetchInput, init?: FetchInit): AbortSignal | null {
+  if (init?.signal) return init.signal;
+  if (init?.signal === null) return null;
+  return input instanceof Request ? input.signal : null;
+}
+
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -44,40 +52,43 @@ export function createHttpClient(options: HttpClientOptions = {}): Fetch {
     const method = requestMethod(input, init);
     const url = requestUrl(input);
     const logUrl = url.split('?')[0] ?? url;
+    const callerAbort = callerSignal(input, init);
     const attempts = IDEMPOTENT_METHODS.has(method) ? retries + 1 : 1;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
-      const controller = new AbortController();
-      if (init?.signal?.aborted) controller.abort(init.signal.reason);
-      const onAbort = () => controller.abort(init?.signal?.reason);
-      init?.signal?.addEventListener('abort', onAbort, { once: true });
-      const timer = setTimeout(() => controller.abort(new Error('HTTP timeout')), timeoutMs);
+      const timeout = new AbortController();
+      const timer = setTimeout(() => timeout.abort(new Error('HTTP timeout')), timeoutMs);
+      timer.unref();
+      const signal = callerAbort ? AbortSignal.any([callerAbort, timeout.signal]) : timeout.signal;
       const startedAt = Date.now();
 
       try {
-        const response = await fetchImpl(input, { ...init, signal: controller.signal });
+        const response = await fetchImpl(input, { ...init, signal });
         console.info(
           `[http] ${method} ${logUrl} -> ${response.status} (${Date.now() - startedAt}ms, attempt ${attempt}/${attempts})`,
         );
 
         if (attempt < attempts && RETRYABLE_STATUS.has(response.status)) {
           if (response.body) await response.body.cancel();
+          clearTimeout(timer);
           await wait(baseDelayMs * 2 ** (attempt - 1));
           continue;
         }
 
+        // The body is still unread here: keep this attempt's timeout and the
+        // caller's abort live so both continue to apply while the consumer
+        // streams the body. Clearing them now would orphan the response.
+        if (response.body === null) clearTimeout(timer);
         return response;
       } catch (error) {
+        clearTimeout(timer);
         console.warn(
           `[http] ${method} ${logUrl} failed after ${Date.now() - startedAt}ms (attempt ${attempt}/${attempts}): ${
             error instanceof Error ? error.message : 'unknown error'
           }`,
         );
-        if (init?.signal?.aborted || attempt === attempts) throw error;
+        if (callerAbort?.aborted || attempt === attempts) throw error;
         await wait(baseDelayMs * 2 ** (attempt - 1));
-      } finally {
-        clearTimeout(timer);
-        init?.signal?.removeEventListener('abort', onAbort);
       }
     }
 

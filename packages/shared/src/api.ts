@@ -51,6 +51,8 @@ export interface CaptureResponse {
 /** GET /api/items — query is encoded in the URL; this is the response. */
 export interface ListItemsResponse {
   items: SavedItem[];
+  /** True when more items exist beyond this page. */
+  hasMore: boolean;
   nextCursor: string | null;
 }
 

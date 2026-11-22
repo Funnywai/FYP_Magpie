@@ -6,7 +6,7 @@ A mobile app that captures short-form social media content and makes it searchab
 
 ## Status
 
-**Foundation + auth.** Monorepo structure, local Supabase schema (12 tables + RLS), pgTAP tests, CI, and shared types are in place. The Expo app has email/password auth, session persistence, and the real saved-item list; remaining screens still use mock data. The capture pipeline is the next milestone (Phase 3, Nov–Dec 2026).
+**Foundation + auth.** Monorepo structure, local Supabase schema (13 tables + RLS), pgTAP tests, CI, and shared types are in place. The Expo app has email/password auth, session persistence, and the real saved-item list; remaining screens still use mock data. The capture pipeline is the next milestone (Phase 3, Nov–Dec 2026).
 
 ## Prerequisites
 
