@@ -1,7 +1,14 @@
-import { SignJWT, createLocalJWKSet, exportJWK, generateKeyPair, type JWTPayload } from 'jose';
+import {
+  SignJWT,
+  createLocalJWKSet,
+  errors,
+  exportJWK,
+  generateKeyPair,
+  type JWTPayload,
+} from 'jose';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { createVerifier } from '../src/auth/verify.js';
+import { AuthUnavailableError, createVerifier, InvalidTokenError } from '../src/auth/verify.js';
 
 const ISSUER = 'http://127.0.0.1:54321/auth/v1';
 const AUDIENCE = 'authenticated';
@@ -31,7 +38,11 @@ beforeAll(async () => {
 });
 
 describe('createVerifier (JWKS)', () => {
-  const verifier = () => createVerifier({ jwksUrl: new URL('https://unused.test/jwks'), issuer: ISSUER, audience: AUDIENCE }, jwks);
+  const verifier = () =>
+    createVerifier(
+      { jwksUrl: new URL('https://unused.test/jwks'), issuer: ISSUER, audience: AUDIENCE },
+      jwks,
+    );
 
   it('returns sub and session id for a valid ES256 token', async () => {
     await expect(verifier()(await sign())).resolves.toEqual({ sub: 'user-1', sessionId: 'sess-1' });
@@ -47,23 +58,31 @@ describe('createVerifier (JWKS)', () => {
       .setIssuedAt()
       .setExpirationTime('1h')
       .sign(other.privateKey);
-    await expect(verifier()(token)).rejects.toThrow();
+    await expect(verifier()(token)).rejects.toBeInstanceOf(InvalidTokenError);
   });
 
   it('rejects an expired token', async () => {
-    await expect(verifier()(await sign({}, { expiresIn: '-1s' }))).rejects.toThrow();
+    await expect(verifier()(await sign({}, { expiresIn: '-1s' }))).rejects.toBeInstanceOf(
+      InvalidTokenError,
+    );
   });
 
   it('rejects a wrong issuer', async () => {
-    await expect(verifier()(await sign({}, { issuer: 'https://evil.test/auth/v1' }))).rejects.toThrow();
+    await expect(
+      verifier()(await sign({}, { issuer: 'https://evil.test/auth/v1' })),
+    ).rejects.toBeInstanceOf(InvalidTokenError);
   });
 
   it('rejects a wrong audience', async () => {
-    await expect(verifier()(await sign({}, { audience: 'anon' }))).rejects.toThrow();
+    await expect(verifier()(await sign({}, { audience: 'anon' }))).rejects.toBeInstanceOf(
+      InvalidTokenError,
+    );
   });
 
   it('rejects a token with no sub', async () => {
-    await expect(verifier()(await sign({}, { subject: '' }))).rejects.toThrow('missing sub');
+    await expect(verifier()(await sign({}, { subject: '' }))).rejects.toBeInstanceOf(
+      InvalidTokenError,
+    );
   });
 
   it('rejects an HS256 token even if it has a matching kid', async () => {
@@ -76,6 +95,17 @@ describe('createVerifier (JWKS)', () => {
       .setExpirationTime('1h')
       .sign(new TextEncoder().encode('test-secret-at-least-32-characters-long'));
 
-    await expect(verifier()(token)).rejects.toThrow();
+    await expect(verifier()(token)).rejects.toBeInstanceOf(InvalidTokenError);
+  });
+
+  it('reports a JWKS timeout as an unavailable dependency', async () => {
+    const verifier = createVerifier(
+      { jwksUrl: new URL('https://unused.test/jwks'), issuer: ISSUER, audience: AUDIENCE },
+      async () => {
+        throw new errors.JWKSTimeout();
+      },
+    );
+
+    await expect(verifier(await sign())).rejects.toBeInstanceOf(AuthUnavailableError);
   });
 });

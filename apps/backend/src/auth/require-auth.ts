@@ -2,7 +2,12 @@ import type { MiddlewareHandler } from 'hono';
 
 import { apiError } from '../errors.js';
 import { extractBearer } from './extract-bearer.js';
-import { verifierFromEnv, type Verifier } from './verify.js';
+import {
+  AuthUnavailableError,
+  InvalidTokenError,
+  verifierFromEnv,
+  type Verifier,
+} from './verify.js';
 
 export type AuthEnv = {
   Variables: {
@@ -26,8 +31,17 @@ export function createRequireAuth(verify: Verifier): MiddlewareHandler<AuthEnv> 
     } catch (error) {
       // Log the reason, never the token: verification failures are useful in dev
       // and a token in logs is a credential leak.
-      console.warn('[auth] token verification failed:', error instanceof Error ? error.message : error);
-      return c.json(apiError('UNAUTHENTICATED', 'Invalid or expired token'), 401);
+      if (error instanceof InvalidTokenError) {
+        console.warn('[auth] token verification failed:', error.message);
+        return c.json(apiError('UNAUTHENTICATED', 'Invalid or expired token'), 401);
+      }
+      if (error instanceof AuthUnavailableError) {
+        console.error('[auth] token verification unavailable:', error.message);
+        return c.json(apiError('INTERNAL', 'Authentication temporarily unavailable'), 503);
+      }
+      // An unexpected verifier failure is an internal bug, not a bad session.
+      // Let it reach the 500 handler instead of signing the user out.
+      throw error;
     }
 
     // Only auth failures become 401. Downstream errors must surface as 5xx,
