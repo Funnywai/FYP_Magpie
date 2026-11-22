@@ -2,7 +2,7 @@
 -- Run with: supabase test db
 
 begin;
-select plan(28);
+select plan(32);
 
 insert into auth.users (id, email)
 values
@@ -127,6 +127,22 @@ select throws_ok(
   '42501',
   null::text,
   'a viewer cannot add a link'
+);
+
+select is_empty(
+  $$update public.collection_items set order_index = 9
+    where collection_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      and item_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    returning item_id$$,
+  'a viewer cannot reorder a link'
+);
+
+select is_empty(
+  $$delete from public.collection_items
+    where collection_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      and item_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    returning item_id$$,
+  'a viewer cannot remove a link'
 );
 
 -- --- Editor: link own items, reorder, remove; no metadata changes --------
@@ -268,6 +284,21 @@ select results_eq(
   array['33333333-3333-3333-3333-333333333333'::uuid],
   'the owner can remove a member'
 );
+
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+
+select is_empty(
+  $$select * from public.collections where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
+  'a removed member can no longer read the collection'
+);
+
+select is_empty(
+  $$select * from public.collection_items
+    where collection_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'$$,
+  'a removed member can no longer read link rows'
+);
+
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 
 select results_eq(
   $$delete from public.collections where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
