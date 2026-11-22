@@ -18,17 +18,17 @@ describe('GET /api/items', () => {
     let receivedToken: string | null = null;
     const res = await appWith(async (accessToken) => {
       receivedToken = accessToken;
-      return [];
+      return { items: [], hasMore: false };
     }).request('/api/items', {
       headers: { Authorization: `Bearer ${TOKEN}` },
     });
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ items: [], nextCursor: null });
+    await expect(res.json()).resolves.toEqual({ items: [], hasMore: false, nextCursor: null });
     expect(receivedToken).toBe(TOKEN);
   });
 
   it('requires authentication', async () => {
-    const res = await appWith(async () => []).request('/api/items');
+    const res = await appWith(async () => ({ items: [], hasMore: false })).request('/api/items');
     expect(res.status).toBe(401);
   });
 

@@ -64,18 +64,32 @@ function toSavedItem(row: SavedItemRow): SavedItem {
   };
 }
 
-/** First page of the user's items, newest first. Pagination arrives with search (Step 6). */
-export async function listItemsForUser(accessToken: string): Promise<SavedItem[]> {
+const PAGE_SIZE = 20;
+/** Fetch one past the page so `hasMore` needs no second query or COUNT. */
+const PROBE_LIMIT = PAGE_SIZE + 1;
+
+export interface ItemsPage {
+  items: SavedItem[];
+  hasMore: boolean;
+}
+
+/** First page of the user's items, newest first. Cursor pagination arrives with search (Step 6). */
+export async function listItemsForUser(accessToken: string): Promise<ItemsPage> {
   const db = createUserClient(accessToken);
 
   const { data, error } = await db
     .from('saved_items')
     .select(ITEM_COLUMNS)
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(PROBE_LIMIT)
     .returns<SavedItemRow[]>();
 
   if (error) throw Object.assign(new Error(error.message), { code: error.code });
 
-  return (data ?? []).map(toSavedItem);
+  const rows = data ?? [];
+
+  return {
+    items: rows.slice(0, PAGE_SIZE).map(toSavedItem),
+    hasMore: rows.length > PAGE_SIZE,
+  };
 }
