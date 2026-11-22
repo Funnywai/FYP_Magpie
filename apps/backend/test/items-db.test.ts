@@ -34,20 +34,21 @@ interface Row {
 }
 
 function row(index: number): Row {
+  const newestFirstSeconds = 59 - index;
   return {
     id: `item-${index}`,
     user_id: 'user-1',
     source_url: `https://example.com/${index}`,
     source_platform: 'instagram',
-    content_type: 'reel',
+    content_type: 'media',
     title: null,
     caption: null,
     highlights: [],
     labels: [],
     status: 'done',
-    transcript_status: 'done',
-    created_at: `2026-11-22T10:00:${String(index).padStart(2, '0')}.000Z`,
-    updated_at: `2026-11-22T10:00:${String(index).padStart(2, '0')}.000Z`,
+    transcript_status: 'processed',
+    created_at: `2026-11-22T10:00:${String(newestFirstSeconds).padStart(2, '0')}.000Z`,
+    updated_at: `2026-11-22T10:00:${String(newestFirstSeconds).padStart(2, '0')}.000Z`,
     status_reason: null,
     capture_state: null,
   };
